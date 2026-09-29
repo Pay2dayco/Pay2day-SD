@@ -23,9 +23,10 @@ node tests/latest-feedback-check.mjs
 node tests/branches-check.mjs
 node tests/review-smoke.mjs
 node tests/content-check.mjs
+node tests/loan-compatibility-check.mjs
 ```
 
-These serve only the built `dist/` on 127.0.0.1 ports 3011–3015. Each browser context blocks unmocked external requests, API paths, non-GET requests and WebSockets; service workers are disabled. Tests fail if that guard blocks an unexpected attempt. Mock adapter cases intercept synthetic session/save/lookup/verification/submission and challenge responses entirely in Playwright; they do not change preview configuration on disk or contact an intake service. The servers/browsers close on completion.
+These serve only the built `dist/` on 127.0.0.1 ports 3011–3016. Each browser context blocks unmocked external requests, API paths, non-GET requests and WebSockets; service workers are disabled. Tests fail if that guard blocks an unexpected attempt. Mock adapter cases intercept synthetic session/save/resume/lookup/verification/submission and challenge responses entirely in Playwright; they do not change preview configuration on disk or contact an intake service. The servers/browsers close on completion.
 
 ## Source reconciliation
 
@@ -35,9 +36,11 @@ At initial recovery, 58 original files were byte-identical, including all public
 
 ## Customer-facing wording revision
 
-All 17 recovered pages and relevant dynamic descriptions now use the approved brokerage wording and Business Cash Advance product name. Internal route/category IDs, URLs, form controls, calculations, runtime configuration and consent-capture behavior are unchanged. The inline/public application terms receive display terminology changes only; clause count, acceptance controls and the existing preview terms version remain unchanged. This does not activate intake or authorize live use of those terms.
+All 17 recovered pages and relevant dynamic descriptions use the approved brokerage wording and Business Cash Advance product name. Internal route/category IDs, URLs, form controls, calculations and runtime configuration are unchanged. Existing-loan category values remain `Cash Advance` in state, hidden fields, repeat matching, saved drafts and callback payloads. A display-only helper changes the category label, facility title/add button and review text without mapping or migrating stored values.
 
-The six added content unit checks bring the total to 37 passing tests. The additional browser suite checks all 17 pages at 320, 390, 768, 1024 and 1440 pixels, calculator notices, Explorer scope/compare/summary text and a synthetic Business Cash Advance Fact-Find through non-submitting completion. All four existing browser suites also pass. Source HTML structure, links, IDs, values and non-description attributes were compared against the parent; they are unchanged. Local screenshots remain ignored. Responsive emulation and synthetic tests are not production or legal certification.
+The exact inline/public clauses belonging to `2026-09-24-fact-find-1` remain at the parent text, including historical merchant/business cash advance wording. Their terminology update is deferred to a separate consent/versioning packet. The existing consent version and capture controls are not redefined. The unit test pins the complete parent application-terms module by SHA-256 and checks the public clause list for exact equality; wording exceptions cover only those exact historical clauses and the two explicit internal `Cash Advance` literals, never an entire policy file. No live consent or intake is activated.
+
+The six content unit checks bring the total to 37 tests. The content browser suite checks all 17 pages at 320, 390, 768, 1024 and 1440 pixels, calculator notices, Explorer scope/compare/summary text and a synthetic Business Cash Advance Fact-Find through non-submitting completion. The loan compatibility suite proves original type values in draft/save and callback payloads, resumes two same-lender/type facilities, checks independent editing/removal/re-add, review labels and reset acceptance using local mocks. Run both alongside the four existing browser suites. Source HTML structure, links, IDs, values and non-description attributes remain unchanged. Exact local results and tested revision are recorded in the PR; they are not hosted CI or independent reviewer results. Local screenshots remain ignored. Responsive emulation and synthetic tests are not production or legal certification.
 
 ## Results on 29 September 2026
 

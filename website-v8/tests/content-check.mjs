@@ -68,7 +68,9 @@ try{
    await next();
   }
   assert.equal(await page.locator('#step-title').innerText(),'Check and accept');
-  assert.match(await page.locator('#fields').innerText(),/Business Cash Advance/);
+  const loanReview=page.locator('.ff-review-section').filter({has:page.locator('[data-edit="4"]')});
+  await loanReview.locator('summary').click();
+  assert.ok((await loanReview.locator('dd').allTextContents()).includes('Business Cash Advance'));
   assert.ok((await page.locator('#fields').innerText()).includes(approved));
   await checkView('Fact-Find terms '+width);
   await page.screenshot({path:`test-results/content/terms-${width}.png`,fullPage:true});
