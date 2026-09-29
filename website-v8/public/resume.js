@@ -1,0 +1,17 @@
+import {preview,request,challenge} from './intake-client.js';
+// A link is a locator, not permission to read a draft. Email verification is required first.
+export async function resumeDraft(){
+ const hash=new URLSearchParams(location.hash.slice(1));const token=hash.get('resume')||hash.get('review');if(!token)return null;
+ const purpose=hash.has('review')?'client_review':'resume';history.replaceState(null,'',location.pathname);
+ const dialog=document.createElement('dialog');dialog.className='lead-dialog';dialog.setAttribute('aria-labelledby','resume-title');
+ dialog.innerHTML='<div class="dialog-heading"><h2 id="resume-title">Continue your fact-find</h2><button type="button" class="close-button" aria-label="Close secure access">×</button></div><p>For your privacy, we verify your email before showing any saved information.</p><p id="resume-status" role="status"></p><div id="resume-challenge"></div><button type="button" class="primary-button" id="resume-send">Email me a verification code</button><form id="resume-code-form" hidden><label for="resume-code">Code from your email</label><input id="resume-code" autocomplete="one-time-code" inputmode="numeric" maxlength="12" required><button type="submit" class="primary-button">Verify & continue</button></form><p class="field-hint">Need help? Call <a href="tel:+442033978990">020 3397 8990</a>. For your security, a fresh code is needed whenever you reopen a saved form.</p>';
+ document.body.append(dialog);dialog.showModal();const status=dialog.querySelector('#resume-status'),send=dialog.querySelector('#resume-send'),form=dialog.querySelector('form');
+ return new Promise(resolve=>{
+  let done=false,accessRef=null,working=false;const finish=value=>{if(done)return;done=true;resolve(value);dialog.close();};
+  dialog.querySelector('.close-button').onclick=()=>finish(null);dialog.addEventListener('close',()=>{if(!done){done=true;resolve(null);}dialog.remove();});
+  if(preview){status.textContent='Review version: saved drafts and email verification are not connected. You can close this window and try the form with example details.';send.disabled=true;return;}
+  if(!/^[A-Za-z0-9_-]{32,256}$/.test(token)){status.textContent='This link could not be opened. Please request a new link from Pay2Day.';send.disabled=true;return;}
+  send.onclick=async()=>{if(working)return;working=true;send.disabled=true;try{const turnstileToken=await challenge('#resume-challenge','access');const r=await request('/access/request',{token,purpose,turnstileToken});if(typeof r.accessRef!=='string')throw new Error('This link could not be opened. Please contact Pay2Day.');accessRef=r.accessRef;status.textContent='If this link is valid, a code has been sent to the email address on the enquiry.';form.hidden=false;form.querySelector('input').focus();}catch(e){status.textContent=e.message;send.disabled=false;}finally{working=false;}};
+  form.onsubmit=async e=>{e.preventDefault();if(working)return;working=true;const button=form.querySelector('button');button.disabled=true;try{const result=await request('/access/confirm',{accessRef,code:form.querySelector('input').value,purpose});if(result.verified!==true||typeof result.applicationId!=='string'||!Number.isInteger(result.revision)||!result.fields||!result.counts)throw new Error('The saved form could not be opened. Please contact Pay2Day.');finish({...result,accessPurpose:purpose});}catch(e){status.textContent=e.message;}finally{working=false;button.disabled=false;}};
+ });
+}

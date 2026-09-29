@@ -1,0 +1,13 @@
+{
+  "name": "pay2day-website",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python -m http.server 3000 --directory public",
+    "build": "node build.mjs",
+    "build:production": "node build.mjs --production",
+    "test": "node --test tests/*.test.js",
+    "build:live": "node build.mjs --production --live"
+  }
+}
