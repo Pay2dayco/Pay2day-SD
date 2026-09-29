@@ -6,7 +6,7 @@ The existing repository root and CNAME are unchanged. Serve `website-v8/dist` as
 
 ## Reproduction
 
-Node 24.19.0 was used. No dependency installation is needed for the 31 unit tests or build:
+Node 24.19.0 was used. No dependency installation is needed for the unit tests or build:
 
 ```sh
 node --test tests/*.test.js
@@ -22,15 +22,22 @@ node tests/final-journey-check.mjs
 node tests/latest-feedback-check.mjs
 node tests/branches-check.mjs
 node tests/review-smoke.mjs
+node tests/content-check.mjs
 ```
 
-These serve only the built `dist/` on 127.0.0.1 ports 3011–3014. Each browser context blocks unmocked external requests, API paths, non-GET requests and WebSockets; service workers are disabled. Tests fail if that guard blocks an unexpected attempt. Mock adapter cases intercept synthetic session/save/lookup/verification/submission and challenge responses entirely in Playwright; they do not change preview configuration on disk or contact an intake service. The servers/browsers close on completion.
+These serve only the built `dist/` on 127.0.0.1 ports 3011–3015. Each browser context blocks unmocked external requests, API paths, non-GET requests and WebSockets; service workers are disabled. Tests fail if that guard blocks an unexpected attempt. Mock adapter cases intercept synthetic session/save/lookup/verification/submission and challenge responses entirely in Playwright; they do not change preview configuration on disk or contact an intake service. The servers/browsers close on completion.
 
 ## Source reconciliation
 
 All 61 original file hashes matched SOURCE-PROVENANCE.json before editing. The supplied archive SHA-256 was `723d0546a8a87b46a20d822014286b58ca3ffc9d761653fb9234fad736c4067b`.
 
-58 original files remain byte-identical, including all public source/assets, build/package files, unit tests and reference modules. Only the three original browser scripts changed for portable startup, build-directory serving and local screenshot paths; their behavioral assertions remain. The manifest retains original hashes so those three expected adaptations can be audited. The private handoff README and its administrative metadata were not copied into this public directory. No hosting identity, private handoff documents, dependencies or generated artifacts are included.
+At initial recovery, 58 original files were byte-identical, including all public source/assets, build/package files, unit tests and reference modules. Only the three original browser scripts changed for portable startup, build-directory serving and local screenshot paths; their behavioral assertions remain. The manifest retains original recovery hashes, not hashes of subsequent content revisions. The private handoff README and its administrative metadata were not copied into this public directory. No hosting identity, private handoff documents, dependencies or generated artifacts are included.
+
+## Customer-facing wording revision
+
+All 17 recovered pages and relevant dynamic descriptions now use the approved brokerage wording and Business Cash Advance product name. Internal route/category IDs, URLs, form controls, calculations, runtime configuration and consent-capture behavior are unchanged. The inline/public application terms receive display terminology changes only; clause count, acceptance controls and the existing preview terms version remain unchanged. This does not activate intake or authorize live use of those terms.
+
+The six added content unit checks bring the total to 37 passing tests. The additional browser suite checks all 17 pages at 320, 390, 768, 1024 and 1440 pixels, calculator notices, Explorer scope/compare/summary text and a synthetic Business Cash Advance Fact-Find through non-submitting completion. All four existing browser suites also pass. Source HTML structure, links, IDs, values and non-description attributes were compared against the parent; they are unchanged. Local screenshots remain ignored. Responsive emulation and synthetic tests are not production or legal certification.
 
 ## Results on 29 September 2026
 
