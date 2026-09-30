@@ -6,7 +6,7 @@ The existing repository root and CNAME are unchanged. Serve `website-v8/dist` as
 
 ## Reproduction
 
-Node 24.19.0 was used. No dependency installation is needed for the 31 unit tests or build:
+Node 24.19.0 was used. No dependency installation is needed for the unit tests or build:
 
 ```sh
 node --test tests/*.test.js
@@ -22,15 +22,28 @@ node tests/final-journey-check.mjs
 node tests/latest-feedback-check.mjs
 node tests/branches-check.mjs
 node tests/review-smoke.mjs
+node tests/content-check.mjs
+node tests/loan-compatibility-check.mjs
+node tests/ux-check.mjs
+node tests/ux-save-check.mjs
+node tests/field-boundary-check.mjs
 ```
 
-These serve only the built `dist/` on 127.0.0.1 ports 3011–3014. Each browser context blocks unmocked external requests, API paths, non-GET requests and WebSockets; service workers are disabled. Tests fail if that guard blocks an unexpected attempt. Mock adapter cases intercept synthetic session/save/lookup/verification/submission and challenge responses entirely in Playwright; they do not change preview configuration on disk or contact an intake service. The servers/browsers close on completion.
+These serve only the built `dist/` on 127.0.0.1 ports 3011–3019. Each browser context blocks unmocked external requests, API paths, non-GET requests and WebSockets; service workers are disabled. Tests fail if that guard blocks an unexpected attempt. Mock adapter cases intercept synthetic session/save/resume/lookup/verification/submission and challenge responses entirely in Playwright; they do not change preview configuration on disk or contact an intake service. The servers/browsers close on completion.
 
 ## Source reconciliation
 
 All 61 original file hashes matched SOURCE-PROVENANCE.json before editing. The supplied archive SHA-256 was `723d0546a8a87b46a20d822014286b58ca3ffc9d761653fb9234fad736c4067b`.
 
-58 original files remain byte-identical, including all public source/assets, build/package files, unit tests and reference modules. Only the three original browser scripts changed for portable startup, build-directory serving and local screenshot paths; their behavioral assertions remain. The manifest retains original hashes so those three expected adaptations can be audited. The private handoff README and its administrative metadata were not copied into this public directory. No hosting identity, private handoff documents, dependencies or generated artifacts are included.
+At initial recovery, 58 original files were byte-identical, including all public source/assets, build/package files, unit tests and reference modules. Only the three original browser scripts changed for portable startup, build-directory serving and local screenshot paths; their behavioral assertions remain. The manifest retains original recovery hashes, not hashes of subsequent content revisions. The private handoff README and its administrative metadata were not copied into this public directory. No hosting identity, private handoff documents, dependencies or generated artifacts are included.
+
+## Customer-facing wording revision
+
+All 17 recovered pages and relevant dynamic descriptions use the approved brokerage wording and Business Cash Advance product name. Internal route/category IDs, URLs, form controls, calculations and runtime configuration are unchanged. Existing-loan category values remain `Cash Advance` in state, hidden fields, repeat matching, saved drafts and callback payloads. A display-only helper changes the category label, facility title/add button and review text without mapping or migrating stored values.
+
+The exact inline/public clauses belonging to `2026-09-24-fact-find-1` remain at the parent text, including historical merchant/business cash advance wording. Their terminology update is deferred to a separate consent/versioning packet. The existing consent version and capture controls are not redefined. The unit test pins the complete parent application-terms module by SHA-256 and checks the public clause list for exact equality; wording exceptions cover only those exact historical clauses and the two explicit internal `Cash Advance` literals, never an entire policy file. No live consent or intake is activated.
+
+The six content unit checks bring the total to 37 tests. The content browser suite checks all 17 pages at 320, 390, 768, 1024 and 1440 pixels, calculator notices, Explorer scope/compare/summary text and a synthetic Business Cash Advance Fact-Find through non-submitting completion. The loan compatibility suite proves original type values in draft/save and callback payloads, resumes two same-lender/type facilities, checks independent editing/removal/re-add, review labels and reset acceptance using local mocks. Run both alongside the four existing browser suites. Source HTML structure, links, IDs, values and non-description attributes remain unchanged. Exact local results and tested revision are recorded in the PR; they are not hosted CI or independent reviewer results. Local screenshots remain ignored. Responsive emulation and synthetic tests are not production or legal certification.
 
 ## Results on 29 September 2026
 
@@ -42,6 +55,28 @@ All 61 original file hashes matched SOURCE-PROVENANCE.json before editing. The s
 - Source hash comparison, targeted credential/private-key/JWT scan, public-file inventory and conflict checks passed. No detected credentials/customer records; synthetic test values only. This is not an exhaustive security or accessibility certification.
 
 Exact base/head and publication checks are recorded in the Draft PR. GitHub CI has not been claimed: this repository has no source test workflow.
+
+## WEB-UX-001 reproduction and checks
+
+Reviewed parent: `b48c87c398114484d0281bd21438c0eb7f84ef5a` (`codex/web-content-001`). Exact edit allowlist: `public/fact-find.js`, `public/lead-capture.js`, `tests/ux-check.mjs`, `tests/ux-save-check.mjs` and this README, all under `website-v8/`. No stylesheet or HTML edits were needed.
+
+Before changes, submit the empty Fact-Find, then enter a business name: its error paragraph disappears but its error ID remains in `aria-describedby`. Load the synthetic example, Continue, empty the company number and Continue: two errors have the same ID. Focus the business-structure selector and change it: focus is lost during replacement. The new UX suite's `--baseline` option reports these observations without asserting the repaired behavior (use a throwaway checkout of the reviewed parent with the test/harness copied in). Observed baseline: one dangling description, two company-number error IDs, conditional focus not retained. Ordinary keyboard callback opening and Escape already returned focus correctly. Hiding/removing that opener while the dialog was open exposed the missing fallback; the fix uses a visible local heading.
+
+The normal UX test checks enabled error targets, closed-details expansion, retained help and other active errors, conditional rerender, repeated banks/people/addresses/loans, back retention, optional loan-term pairing, and callback/results opening, Tab/Shift+Tab, Escape and Close. Browser chrome remains reachable through native dialog keyboard behavior; background page controls cannot receive focus. Hidden/removed openers are covered separately. The original journey suites retain their assertions for business/property validation, client-only consent, calculator/Explorer carryover, navigation and clearing semantics.
+
+Layout checks exercise 320/390/768/1024/1440 pixels at 100% and 200% CSS zoom, with reduced motion and keyboard error links. The form controls/error text remain within the viewport. At the narrowest 200% CSS zoom widths the unchanged outer header/footer overflow; this is an existing page-layout limitation outside these form edits. CSS zoom automation is not a manual browser-menu zoom or screen-reader certification. No physical mobile, Safari, Firefox or assistive-technology session was run. Synthetic screenshots stay ignored under `test-results/ux/`.
+
+The save suite holds locally intercepted draft and callback requests, returns HTTP 503, and separately lets the unchanged client’s actual 20-second abort timer expire. It checks retained answers/location, visible error/status, reenabled controls, no completion/advance and no extra request during repeated submit events. It also verifies the existing retry idempotency key. An aborted request does not establish whether a real server committed a write; no rollback or automatic retry is added. No real intake, challenge, email or CRM service is contacted.
+
+Run `node --test tests/*.test.js`, `node build.mjs` (default preview only), then the browser commands above. Exact final revision, browser version, successful suite results and publication checks belong in the Draft PR. Security/role/contract boundaries and production restrictions below still apply.
+
+## WEB-FIELDS-001 existing-field evidence
+
+This test/documentation slice extends coverage on reviewed parent `c3c3356b2ab201ca2268855b8f615cbc5d362008`. Its exact allowlist is `tests/field-boundary-check.mjs`, `tests/field-fixtures.mjs`, `docs/field-coverage.md` and this README. The [website field inventory](docs/field-coverage.md) records existing labels, types, requirements, repeat bounds, serialized values, clearing behavior, reused coverage and remaining gaps. Public runtime source, HTML/CSS, integration examples, build/configuration, dependencies, root served files and CNAME are unchanged.
+
+The additional browser suite uses port 3019 with the unchanged isolated harness. It checks synthetic banking/card counts and transitions, Other text, zero-versus-blank online sales, active/inactive outgoing snapshots, nationality/status branches, optional existing-finance date/term combinations, zero outstanding, property term bounds, and business/property transitions at 320/390/768/1024/1440 pixels. It reuses the established company/contact fixture (`example.invalid`) and locally intercepts adapter/challenge traffic; the on-disk build remains preview. Existing loan-compatibility, journey and UX assertions stay authoritative for their already-covered cases.
+
+Run the 37 existing unit tests, default preview build and all nine browser scripts above. The Draft PR records actual final results, source-tree invariance, and a deliberately malformed synthetic fixture rejected by the new test before restoration. No skip/TODO is a pass. This slice does not implement new fields, API mapping, repayment/frequency or deposit/source semantics, consent policy, or a strict-success contract, and does not complete WEB-FIELDS or FEATURE-WEB-001. Mock responses are frontend test doubles, not backend evidence. Inherited accessibility/device/zoom limitations remain as documented above.
 
 ## Limits and launch dependencies
 

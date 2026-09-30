@@ -6,3 +6,6 @@ export const commonAccountProviders = ['Allica Bank','Bank of Ireland','Bank of 
 export const registeredBanks = [];
 export const cardProcessors = ['Adyen','American Express','Barclaycard Payments','Cashflows','Checkout.com','Clover / First Data / Fiserv','Dojo','Elavon','EVO Payments','Global Payments','Handepay','J.P. Morgan / Chase Paymentech','Lloyds Bank Cardnet','Lopay','myPOS','Opayo / Sage Pay','Paymentsense','PayPal','PayPoint / Payzone','Retail Merchant Services','Revolut Business','Shopify Payments','Square','Stripe','SumUp','takepayments','Teya','Trust Payments','Viva.com / Viva Wallet','Worldline','Worldpay','yetipay','Zettle by PayPal'];
 export const loanCategories = [['bbl','BBL'],['cbils','CBILS'],['rls','RLS'],['ggs','GGS'],['mca','Cash Advance'],['other','Other']];
+
+// Display only: keep existing saved/payload loan type values unchanged.
+export const loanDisplayLabel = type => type==='Cash Advance'?'Business Cash Advance':type;
