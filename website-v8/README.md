@@ -24,9 +24,11 @@ node tests/branches-check.mjs
 node tests/review-smoke.mjs
 node tests/content-check.mjs
 node tests/loan-compatibility-check.mjs
+node tests/ux-check.mjs
+node tests/ux-save-check.mjs
 ```
 
-These serve only the built `dist/` on 127.0.0.1 ports 3011–3016. Each browser context blocks unmocked external requests, API paths, non-GET requests and WebSockets; service workers are disabled. Tests fail if that guard blocks an unexpected attempt. Mock adapter cases intercept synthetic session/save/resume/lookup/verification/submission and challenge responses entirely in Playwright; they do not change preview configuration on disk or contact an intake service. The servers/browsers close on completion.
+These serve only the built `dist/` on 127.0.0.1 ports 3011–3018. Each browser context blocks unmocked external requests, API paths, non-GET requests and WebSockets; service workers are disabled. Tests fail if that guard blocks an unexpected attempt. Mock adapter cases intercept synthetic session/save/resume/lookup/verification/submission and challenge responses entirely in Playwright; they do not change preview configuration on disk or contact an intake service. The servers/browsers close on completion.
 
 ## Source reconciliation
 
@@ -52,6 +54,20 @@ The six content unit checks bring the total to 37 tests. The content browser sui
 - Source hash comparison, targeted credential/private-key/JWT scan, public-file inventory and conflict checks passed. No detected credentials/customer records; synthetic test values only. This is not an exhaustive security or accessibility certification.
 
 Exact base/head and publication checks are recorded in the Draft PR. GitHub CI has not been claimed: this repository has no source test workflow.
+
+## WEB-UX-001 reproduction and checks
+
+Reviewed parent: `b48c87c398114484d0281bd21438c0eb7f84ef5a` (`codex/web-content-001`). Exact edit allowlist: `public/fact-find.js`, `public/lead-capture.js`, `tests/ux-check.mjs`, `tests/ux-save-check.mjs` and this README, all under `website-v8/`. No stylesheet or HTML edits were needed.
+
+Before changes, submit the empty Fact-Find, then enter a business name: its error paragraph disappears but its error ID remains in `aria-describedby`. Load the synthetic example, Continue, empty the company number and Continue: two errors have the same ID. Focus the business-structure selector and change it: focus is lost during replacement. The new UX suite's `--baseline` option reports these observations without asserting the repaired behavior (use a throwaway checkout of the reviewed parent with the test/harness copied in). Observed baseline: one dangling description, two company-number error IDs, conditional focus not retained. Ordinary keyboard callback opening and Escape already returned focus correctly. Hiding/removing that opener while the dialog was open exposed the missing fallback; the fix uses a visible local heading.
+
+The normal UX test checks enabled error targets, closed-details expansion, retained help and other active errors, conditional rerender, repeated banks/people/addresses/loans, back retention, optional loan-term pairing, and callback/results opening, Tab/Shift+Tab, Escape and Close. Browser chrome remains reachable through native dialog keyboard behavior; background page controls cannot receive focus. Hidden/removed openers are covered separately. The original journey suites retain their assertions for business/property validation, client-only consent, calculator/Explorer carryover, navigation and clearing semantics.
+
+Layout checks exercise 320/390/768/1024/1440 pixels at 100% and 200% CSS zoom, with reduced motion and keyboard error links. The form controls/error text remain within the viewport. At the narrowest 200% CSS zoom widths the unchanged outer header/footer overflow; this is an existing page-layout limitation outside these form edits. CSS zoom automation is not a manual browser-menu zoom or screen-reader certification. No physical mobile, Safari, Firefox or assistive-technology session was run. Synthetic screenshots stay ignored under `test-results/ux/`.
+
+The save suite holds locally intercepted draft and callback requests, returns HTTP 503, and separately lets the unchanged client’s actual 20-second abort timer expire. It checks retained answers/location, visible error/status, reenabled controls, no completion/advance and no extra request during repeated submit events. It also verifies the existing retry idempotency key. An aborted request does not establish whether a real server committed a write; no rollback or automatic retry is added. No real intake, challenge, email or CRM service is contacted.
+
+Run `node --test tests/*.test.js`, `node build.mjs` (default preview only), then all eight browser commands above. Exact final revision, browser version, successful suite results and publication checks belong in the Draft PR. Security/role/contract boundaries and production restrictions below still apply.
 
 ## Limits and launch dependencies
 
