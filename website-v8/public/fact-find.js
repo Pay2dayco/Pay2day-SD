@@ -121,7 +121,7 @@ function save(){for(const el of $('fact-form').querySelectorAll('[name]'))state[
 function conditions(){
  for(const panel of $('fields').querySelectorAll('[data-when]')){const [key,value]=panel.dataset.when.split('=');panel.hidden=state[key]!==value;}
  for(const panel of $('fields').querySelectorAll('[data-history]'))panel.hidden=!needsHistory(Number(panel.dataset.history));
- for(const el of $('fields').querySelectorAll('input,select,textarea,button')){const hidden=el.closest('[hidden]');el.disabled=(!!hidden&&$('fields').contains(hidden));}
+ for(const el of $('fields').querySelectorAll('input,select,textarea,button')){const hidden=el.closest('[hidden]');el.disabled=(!!hidden&&$('fields').contains(hidden));if(el.disabled&&el.name)clearFieldError(el);}
 }
 function blocks(i){
  section=i;defaults();
@@ -135,6 +135,8 @@ function blocks(i){
 }
 function render(focus=true){
  if(rendering)return;rendering=true;try{
+ const previousFocus=document.activeElement,restoreFocus=!focus&&$('fields').contains(previousFocus),previousId=previousFocus?.id;
+ const previousErrors=new Set(!focus?[...$('ff-errors').querySelectorAll('[data-error-for]')].map(a=>a.dataset.errorFor):[]);
  companyLookup?.reset();
  showExplorerSummary();const parts=blocks(step);substep=Math.min(substep,parts.length-1);
  $('steps').innerHTML=steps.map(([name],i)=>`<li><button class="step-item ${i<step?'done':''}" ${i===step?'aria-current="step"':''} ${i>step||finished?'disabled':''} type="button" data-step="${i}"><span class="step-number">${i<step?'✓':i+1}</span><span class="step-name">${name}</span></button></li>`).join('');
@@ -146,7 +148,9 @@ function render(focus=true){
  $('ff-next').textContent=step===5?(preview?'Complete review':state['journey.mode']!=='self'?'Send client review link':'Submit fact-find'):step===0?(preview?'Continue':'Send enquiry & continue'):'Continue';
  let later=$('ff-save-later');if(!later){later=document.createElement('button');later.id='ff-save-later';later.type='button';later.className='text-button';later.textContent='Save & continue later';$('ff-next').parentElement.before(later);}later.hidden=preview||!applicationId||finished;
  $('fact-form').hidden=finished;$('ff-end').hidden=!finished;
- if(focus){$('step-title').focus();$('step-title').scrollIntoView({behavior:'smooth',block:'start'});}
+ if(previousErrors.size)showValidation(errorList().filter(e=>previousErrors.has(e.name)),false);
+ if(focus){$('step-title').focus();scrollToField($('step-title'));}
+ else if(restoreFocus)focusField($(previousId)||$('step-title'));
  }finally{rendering=false;}
 }
 function errorList(){
@@ -178,7 +182,7 @@ function errorList(){
  if($('f-property.term')){const term=Number(state['property.term']),min=Number(state['property.minimumTerm']),max=Number(state['property.maximumTerm']);if((min&&term<min)||(max&&term>max))errors.push({name:'property.term',message:'Preferred term must be within your minimum and maximum terms.'});if(state['property.termUnit']==='Years'&&[term,min,max].some(x=>x>40))errors.push({name:'property.termUnit',message:'Enter a term of up to 40 years, or choose months.'});}
  for(const [occupied,total]of [['occupiedFlats','flats'],['occupiedShops','shops']])if($('f-property.'+occupied)&&Number(state['property.'+occupied])>Number(state['property.'+total]))errors.push({name:'property.'+occupied,message:'Let units cannot exceed the number of units entered.'});
  if($('f-property.flats')&&Number(state['property.flats'])+Number(state['property.shops'])+Number(state['property.otherUnits'])===0)errors.push({name:'property.flats',message:'Enter at least one property unit.'});
- return errors;
+ return errors.filter(e=>currentControl($('f-'+e.name)));
 }
 function validateStep(){save();conditions();save();const errors=errorList();if(!errors.length){
  if(step===0){const parts=state['applicant.fullName'].split(/\s+/);state['applicant.first']=parts.shift();state['applicant.last']=parts.join(' ');}
@@ -196,13 +200,28 @@ $('fact-form').addEventListener('change',e=>{save();
  if(e.target.name==='questions.loans'&&state['questions.loans']==='no'){for(const k of Object.keys(state))if(k.startsWith('loans.')||k.startsWith('loanTypes.'))delete state[k];loanCount=0;render(false);return;}
  if(['business.structure','property.purpose','property.type','property.owner','property.repayment','property.rented','business.premises','funding.route','financial.terminals','financial.processorCount','financial.locations'].includes(e.target.name)||/\.(nationality|britishDual|immigrationStatus)$/.test(e.target.name||'')){render(false);return;}
  conditions();save();});
-function showValidation(errors){
- $('fields').querySelectorAll('.field-error').forEach(x=>x.remove());$('fields').querySelectorAll('.has-error').forEach(x=>x.classList.remove('has-error'));
- $('ff-errors').innerHTML='<strong>Please check the following:</strong><ul>'+errors.map(e=>`<li><a href="#f-${esc(e.name)}" data-error-for="${esc(e.name)}">${esc(e.message)}</a></li>`).join('')+'</ul>';$('ff-errors').hidden=false;
- for(const e of errors){const el=$('f-'+e.name);if(!el)continue;el.setAttribute('aria-invalid','true');const host=el.closest('.loan-types')||el.closest('.ff-field')||el.closest('.ff-check');host?.classList.add('has-error');const note=document.createElement('p');note.className='field-error';note.id='error-'+e.name;note.textContent=e.message;host?.append(note);el.setAttribute('aria-describedby',[el.getAttribute('aria-describedby')?.replace(/error-\S+/g,'')||'',note.id].join(' ').trim());const details=el.closest('details');if(details)details.open=true;}
- $('ff-errors').focus();$('ff-errors').scrollIntoView({behavior:'smooth',block:'start'});
+// Closed details can contain active answers; hidden conditional panels cannot.
+function currentControl(el){return !!el&&el.isConnected&&!el.disabled&&el.type!=='hidden'&&!el.closest('[hidden]');}
+function scrollToField(el){el.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});}
+function focusField(el){if(!currentControl(el))el=$('step-title');for(let p=el.parentElement;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;el.focus();}
+function clearFieldError(el){
+ const id='error-'+el.name,note=$(id);note?.remove();el.removeAttribute('aria-invalid');
+ const descriptions=(el.getAttribute('aria-describedby')||'').split(/\s+/).filter(token=>token&&token!==id);
+ if(descriptions.length)el.setAttribute('aria-describedby',descriptions.join(' '));else el.removeAttribute('aria-describedby');
+ const host=el.closest('.loan-types')||el.closest('.ff-field')||el.closest('.ff-check');if(!host?.querySelector('.field-error'))host?.classList.remove('has-error');
+ $('ff-errors').querySelectorAll('[data-error-for]').forEach(a=>{if(a.dataset.errorFor===el.name)a.closest('li')?.remove();});
+ if(!$('ff-errors').querySelector('li'))$('ff-errors').hidden=true;
 }
-$('ff-errors').addEventListener('click',e=>{const a=e.target.closest('[data-error-for]');if(a){e.preventDefault();$('f-'+a.dataset.errorFor)?.focus();}});
+function showValidation(errors,focus=true){
+ $('fields').querySelectorAll('[name]').forEach(clearFieldError);
+ const grouped=new Map();for(const e of errors)if(currentControl($('f-'+e.name))){if(!grouped.has(e.name))grouped.set(e.name,[]);if(!grouped.get(e.name).includes(e.message))grouped.get(e.name).push(e.message);}
+ errors=[...grouped].map(([name,messages])=>({name,message:messages.join(' ')}));
+ if(!errors.length){$('ff-errors').hidden=true;return;}
+ $('ff-errors').innerHTML='<strong>Please check the following:</strong><ul>'+errors.map(e=>`<li><a href="#f-${esc(e.name)}" data-error-for="${esc(e.name)}">${esc(e.message)}</a></li>`).join('')+'</ul>';$('ff-errors').hidden=false;
+ for(const e of errors){const el=$('f-'+e.name);el.setAttribute('aria-invalid','true');const host=el.closest('.loan-types')||el.closest('.ff-field')||el.closest('.ff-check');host?.classList.add('has-error');const note=document.createElement('p');note.className='field-error';note.id='error-'+e.name;note.textContent=e.message;host?.append(note);el.setAttribute('aria-describedby',[el.getAttribute('aria-describedby')||'',note.id].join(' ').trim());for(let p=el.parentElement;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;}
+ if(focus){$('ff-errors').focus();scrollToField($('ff-errors'));}
+}
+$('ff-errors').addEventListener('click',e=>{const a=e.target.closest('[data-error-for]');if(a){e.preventDefault();focusField($('f-'+a.dataset.errorFor));}});
 function showError(message){$('ff-errors').textContent=message;$('ff-errors').hidden=false;$('ff-errors').focus();}
 async function saveLive(){
  if(preview)return;
@@ -232,18 +251,18 @@ $('fields').addEventListener('click',async e=>{
  const button=e.target.closest('button');if(!button)return;save();if(!['download-application-terms','verify-email'].includes(button.id)){state['application.acceptance']='no';emailVerified=false;submitKey=crypto.randomUUID();}
  if(button.id==='download-application-terms'){downloadTerms();return;}
  if(button.id==='verify-email'){try{const r=await request('/verification/confirm',{applicationId,code:$('verification-code').value,purpose:'acceptance'});if(r.verified!==true)throw new Error('Please check the code and try again.');emailVerified=true;$('verification-status').textContent='Email confirmed. You can now submit.';}catch(e){$('verification-status').textContent=e.message;}return;}
- if(button.id==='add-bank'){if(bankCount<8)bankCount++;render(false);return;}
- if(button.dataset.removeBank){const i=Number(button.dataset.removeBank);removeIndexed('banks',i,bankCount);bankCount--;render(false);return;}
+ if(button.id==='add-bank'){if(bankCount<8)bankCount++;render(false);focusField($('f-banks.'+(bankCount-1)+'.provider'));return;}
+ if(button.dataset.removeBank){const i=Number(button.dataset.removeBank);removeIndexed('banks',i,bankCount);bankCount--;render(false);focusField($('add-bank'));return;}
  if(button.dataset.addressLookup){const prefix=button.dataset.addressLookup,status=$('lookup-'+prefix);if(preview){status.textContent='Address lookup is not connected in this review version. Enter the address manually.';return;}try{const postcode=state[prefix+'.postcode'];if(!postcode)throw new Error('Enter your postcode first.');const r=await request('/lookups/addresses',{postcode});const box=$('addresses-'+prefix);box.replaceChildren();for(const item of (r.items||[]).slice(0,50)){const b=document.createElement('button');b.type='button';b.className='secondary-button';b.textContent=item.address;b.onclick=()=>{state[prefix+'.address']=item.address;state[prefix+'.postcode']=item.postcode;render(false);};box.append(b);}}catch(e){status.textContent=e.message;}return;}
 
 
  if(button.dataset.useApplicant!==undefined){const p='owners.'+Number(button.dataset.useApplicant);for(const k of ['first','last','phone','email'])state[p+'.'+k]=state['applicant.'+(k==='email'&&state['applicant.sharedEmail']==='no'?'personalEmail':k)]||'';render(false);$('f-'+p+'.first').focus();return;}
  if(button.id==='add-owner'){if(ownerCount>=10)return;ownerCount++;previousCounts.push(1);substep=(ownerCount-1)*3;render(false);$('f-owners.'+(ownerCount-1)+'.first').focus();return;}
  if(button.dataset.addLoanType){if(loanCount>=30)return;const type=loanCategories.find(c=>c[0]===button.dataset.addLoanType)[1];state[`loans.${loanCount}.type`]=type;loanCount++;render(false);$('f-loans.'+(loanCount-1)+'.original').focus();return;}
- if(button.dataset.removeOwner!==undefined){const i=Number(button.dataset.removeOwner);removeIndexed('owners',i,ownerCount);ownerCount--;previousCounts.splice(i,1);render(false);return;}
- if(button.dataset.removeLoan!==undefined){const i=Number(button.dataset.removeLoan),type=state[`loans.${i}.type`];removeIndexed('loans',i,loanCount);loanCount--;if(!Array.from({length:loanCount},(_,j)=>state[`loans.${j}.type`]).includes(type))state['loanTypes.'+loanCategories.find(c=>c[1]===type)[0]]='no';render(false);return;}
+ if(button.dataset.removeOwner!==undefined){const i=Number(button.dataset.removeOwner);removeIndexed('owners',i,ownerCount);ownerCount--;previousCounts.splice(i,1);substep=Math.min(i,ownerCount-1)*3;render(false);focusField($('step-title'));return;}
+ if(button.dataset.removeLoan!==undefined){const i=Number(button.dataset.removeLoan),type=state[`loans.${i}.type`];removeIndexed('loans',i,loanCount);loanCount--;if(!Array.from({length:loanCount},(_,j)=>state[`loans.${j}.type`]).includes(type))state['loanTypes.'+loanCategories.find(c=>c[1]===type)[0]]='no';render(false);focusField($('f-loanTypes.'+loanCategories.find(c=>c[1]===type)[0]));return;}
  if(button.dataset.addAddress!==undefined){const i=Number(button.dataset.addAddress);if(previousCounts[i]>=10)return;previousCounts[i]++;render(false);$('f-owners.'+i+'.previous.'+(previousCounts[i]-1)+'.address').focus();return;}
- if(button.dataset.removeAddress!==undefined){const [i,j]=button.dataset.removeAddress.split(':').map(Number);removeIndexed('owners.'+i+'.previous',j,previousCounts[i]);previousCounts[i]--;render(false);return;}
+ if(button.dataset.removeAddress!==undefined){const [i,j]=button.dataset.removeAddress.split(':').map(Number);removeIndexed('owners.'+i+'.previous',j,previousCounts[i]);previousCounts[i]--;render(false);focusField($('fields').querySelector('[data-add-address="'+i+'"]'));return;}
  if(button.dataset.edit!==undefined)go(Number(button.dataset.edit));
 });
 function loadExample(){
@@ -298,7 +317,7 @@ export function offerFundingAmount(amount){
 }
 
 // Any edited answer invalidates acceptance of the previous revision.
-$('fact-form').addEventListener('input',e=>{if(e.target.name&&!e.target.name.startsWith('application.'))invalidate();if(e.target.name){const el=e.target;el.removeAttribute('aria-invalid');const host=el.closest('.ff-field')||el.closest('.ff-check');host?.classList.remove('has-error');host?.querySelectorAll('.field-error').forEach(n=>n.remove());$('ff-errors').querySelectorAll('[data-error-for]').forEach(a=>{if(a.dataset.errorFor===el.name)a.closest('li')?.remove();});if(!$('ff-errors').querySelector('li'))$('ff-errors').hidden=true;}updateEquity();});
+$('fact-form').addEventListener('input',e=>{if(e.target.name&&!e.target.name.startsWith('application.'))invalidate();if(e.target.name)clearFieldError(e.target);updateEquity();});
 const firstContact=getLeadContact();for(const [key,v]of Object.entries({'applicant.fullName':firstContact.name,'applicant.email':firstContact.email,'applicant.phone':firstContact.phone,'business.name':firstContact.business}))if(v&&!state[key])state[key]=v;
 if(location.hash==='#property'){state['property.interested']='yes';state['funding.route']='property';}
 checkInvitation().then(result=>{if(result){invitationStatus=result;render(false);if(result.pending)showError('This team member’s link is not verified in the review version. No attribution has been saved.');}}).catch(()=>{invitationStatus={pending:true};showError('This team member’s invitation could not be checked. You can still start a direct enquiry.');});
