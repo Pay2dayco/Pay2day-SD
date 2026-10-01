@@ -1,0 +1,211 @@
+{
+  "manifestVersion": 1,
+  "packetId": "WEB-ROLLBACK-EVIDENCE-001",
+  "repository": "Pay2dayco/Pay2day-SD",
+  "evidenceOnly": true,
+  "deploymentAuthorized": false,
+  "main": {
+    "ref": "refs/remotes/origin/main",
+    "sha": "96a6be46aba5f274e9c38daa52f8e0b1c3630315",
+    "tree": "542ce221721f2f6dbd335e7ce1531bfa0b70128f"
+  },
+  "parent": {
+    "ref": "refs/remotes/origin/codex/web-mobile-access-001",
+    "sha": "9689f13999c7253f23133ae25bfbd4c6a8cc0c4d",
+    "tree": "c8fc17e258d8e7d6c4252ad2fdf964c5c1858a39"
+  },
+  "sourceOnlyDependencies": [
+    {
+      "pr": 2,
+      "branch": "codex/web-reuse-001-v8",
+      "sha": "e4235b565d688a2688a65ed561d7f75a114b45f0",
+      "stateAtCapture": "OPEN_DRAFT_UNMERGED_TO_MAIN"
+    },
+    {
+      "pr": 9,
+      "branch": "codex/web-mobile-access-001",
+      "sha": "9689f13999c7253f23133ae25bfbd4c6a8cc0c4d",
+      "stateAtCapture": "OPEN_DRAFT_WORK_PASSED_UNMERGED"
+    }
+  ],
+  "integratedFeatureHistory": [
+    {
+      "pr": 4,
+      "head": "b48ea66c09abb511300988cb59c096ab30200b72",
+      "stateAtCapture": "MERGED_TO_FEATURE_ONLY"
+    },
+    {
+      "pr": 6,
+      "head": "c8a6b946fa5911cf6d3024c0521dff6444529174",
+      "stateAtCapture": "MERGED_TO_FEATURE_ONLY"
+    },
+    {
+      "pr": 8,
+      "head": "a573073e8dee37c3b9a99d295ceb904b3b5b72ce",
+      "stateAtCapture": "MERGED_TO_FEATURE_ONLY"
+    }
+  ],
+  "excludedBlockedEvidence": {
+    "pr": 10,
+    "head": "402ec1983ae961fd1eb47d0781ec7567fa116b66",
+    "reason": "Google search link includes entered business/trading name and registered postcode; no customer values recorded.",
+    "runtimeRemediationAuthorized": false
+  },
+  "protectedRootEntries": {
+    "CNAME": "100644 blob f83f68e4a8bf6c97045540f535f59953d58514c6",
+    "cookie_policy.html": "100644 blob 92ab3a268ebbd350205c39f02a0f4c9375687016",
+    "img/icon.png": "100644 blob 1048f663311a7a45f2393420a886c68c095a63a3",
+    "img/logo.png": "100644 blob 92f480e8808287c18c6381991f6b71a1b44c1cf9",
+    "index.html": "100644 blob d122245d4b0bf04421852c95ca9f90218ff50d89",
+    "privacy_policy.html": "100644 blob e0dcee0ed0d881f5253117ed4c3d4a134f3eb0b0",
+    "terms_conditions.html": "100644 blob f703deb7de2a4fc74391bd847b2ed145bec5028c"
+  },
+  "expectedMainToParentChanges": [
+    "A\twebsite-v8/.gitignore",
+    "A\twebsite-v8/README.md",
+    "A\twebsite-v8/SOURCE-PROVENANCE.json",
+    "A\twebsite-v8/build.mjs",
+    "A\twebsite-v8/docs/field-coverage.md",
+    "A\twebsite-v8/docs/mobile-access-evidence.md",
+    "A\twebsite-v8/integration/agent-invitation.mjs",
+    "A\twebsite-v8/integration/progress.mjs",
+    "A\twebsite-v8/integration/security.mjs",
+    "A\twebsite-v8/package.json",
+    "A\twebsite-v8/public/_headers",
+    "A\twebsite-v8/public/app.js",
+    "A\twebsite-v8/public/application-terms.js",
+    "A\twebsite-v8/public/assets/pay2day-business-hero.webp",
+    "A\twebsite-v8/public/assets/pay2day-icon.png",
+    "A\twebsite-v8/public/assets/pay2day-logo.png",
+    "A\twebsite-v8/public/assets/trustpilot-stars.svg",
+    "A\twebsite-v8/public/brand.css",
+    "A\twebsite-v8/public/bridging-finance.html",
+    "A\twebsite-v8/public/business-cash-advance.html",
+    "A\twebsite-v8/public/business-finance-calculators.html",
+    "A\twebsite-v8/public/business-line-of-credit.html",
+    "A\twebsite-v8/public/business-loans.html",
+    "A\twebsite-v8/public/calculators.js",
+    "A\twebsite-v8/public/card-terminal-funding.html",
+    "A\twebsite-v8/public/commercial-mortgages.html",
+    "A\twebsite-v8/public/company-lookup.js",
+    "A\twebsite-v8/public/cookie_policy.html",
+    "A\twebsite-v8/public/corporate.css",
+    "A\twebsite-v8/public/explorer-tools.js",
+    "A\twebsite-v8/public/fact-find.css",
+    "A\twebsite-v8/public/fact-find.html",
+    "A\twebsite-v8/public/fact-find.js",
+    "A\twebsite-v8/public/fixed-direct-debit-loans.html",
+    "A\twebsite-v8/public/funding-explorer.html",
+    "A\twebsite-v8/public/handover.js",
+    "A\twebsite-v8/public/index.html",
+    "A\twebsite-v8/public/intake-client.js",
+    "A\twebsite-v8/public/journey.css",
+    "A\twebsite-v8/public/lead-capture.js",
+    "A\twebsite-v8/public/logic.js",
+    "A\twebsite-v8/public/merchant-cash-advance.html",
+    "A\twebsite-v8/public/nationalities.js",
+    "A\twebsite-v8/public/privacy_policy.html",
+    "A\twebsite-v8/public/property-calculator-ui.js",
+    "A\twebsite-v8/public/property-calculator.css",
+    "A\twebsite-v8/public/property-calculator.js",
+    "A\twebsite-v8/public/property-finance-calculator.html",
+    "A\twebsite-v8/public/providers.js",
+    "A\twebsite-v8/public/refinements.css",
+    "A\twebsite-v8/public/resume.js",
+    "A\twebsite-v8/public/robots.txt",
+    "A\twebsite-v8/public/runtime-config.js",
+    "A\twebsite-v8/public/secured-business-loans.html",
+    "A\twebsite-v8/public/site.js",
+    "A\twebsite-v8/public/styles.css",
+    "A\twebsite-v8/public/terms-window.js",
+    "A\twebsite-v8/public/terms_conditions.html",
+    "A\twebsite-v8/tests/branches-check.mjs",
+    "A\twebsite-v8/tests/content-check.mjs",
+    "A\twebsite-v8/tests/content.test.js",
+    "A\twebsite-v8/tests/corporate.test.js",
+    "A\twebsite-v8/tests/field-boundary-check.mjs",
+    "A\twebsite-v8/tests/field-fixtures.mjs",
+    "A\twebsite-v8/tests/final-journey-check.mjs",
+    "A\twebsite-v8/tests/latest-feedback-check.mjs",
+    "A\twebsite-v8/tests/loan-compatibility-check.mjs",
+    "A\twebsite-v8/tests/logic.test.js",
+    "A\twebsite-v8/tests/mobile-access-check.mjs",
+    "A\twebsite-v8/tests/property.test.js",
+    "A\twebsite-v8/tests/review-harness.mjs",
+    "A\twebsite-v8/tests/review-smoke.mjs",
+    "A\twebsite-v8/tests/security.test.js",
+    "A\twebsite-v8/tests/ux-check.mjs",
+    "A\twebsite-v8/tests/ux-save-check.mjs"
+  ],
+  "allowedPacketAdditions": [
+    "website-v8/docs/release-manifest.json",
+    "website-v8/docs/release-rollback-evidence.md",
+    "website-v8/tests/release-evidence.mjs",
+    "website-v8/tests/release-evidence.test.js"
+  ],
+  "launchGates": [
+    {
+      "id": "google-query-string",
+      "status": "UNRESOLVED"
+    },
+    {
+      "id": "independent-work-review",
+      "status": "UNRESOLVED"
+    },
+    {
+      "id": "owner-release-approval",
+      "status": "UNRESOLVED"
+    },
+    {
+      "id": "final-staging-e2e",
+      "status": "UNRESOLVED"
+    },
+    {
+      "id": "legal-consent",
+      "status": "UNRESOLVED"
+    },
+    {
+      "id": "api-data-contract",
+      "status": "UNRESOLVED"
+    },
+    {
+      "id": "live-headers-no-store",
+      "status": "UNRESOLVED"
+    },
+    {
+      "id": "origin-network-protection",
+      "status": "UNRESOLVED"
+    },
+    {
+      "id": "session-cookie-retention",
+      "status": "UNRESOLVED"
+    },
+    {
+      "id": "provider-challenge-rate-limits",
+      "status": "UNRESOLVED"
+    },
+    {
+      "id": "runtime-data-config-rollback",
+      "status": "UNRESOLVED"
+    },
+    {
+      "id": "manual-live-health",
+      "status": "UNRESOLVED"
+    }
+  ],
+  "requiredStagingEvidence": [
+    "synthetic-end-to-end",
+    "negative-authorization-and-ownership",
+    "save-resume-revision-replay",
+    "failure-retry-and-delivery",
+    "approved-rollback-rehearsal",
+    "exact-build-and-environment-evidence"
+  ],
+  "rollback": {
+    "knownSourceIsLiveHealthProof": false,
+    "unmergedSource": "ABANDON_OR_REVIEW_SOURCE_ONLY_REVERT",
+    "websiteMain": "EXPLICIT_OWNER_PRODUCTION_APPROVAL_REQUIRED",
+    "apiRuntimeDataConfig": "SEPARATE_COMPONENT_PLANS_REQUIRED",
+    "preferForwardFixWhenStateCompatibilityUnknown": true
+  }
+}
