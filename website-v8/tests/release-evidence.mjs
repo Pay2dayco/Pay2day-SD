@@ -18,6 +18,12 @@ export function observe(){
  const dependencies=[['codex/web-reuse-001-v8','e4235b565d688a2688a65ed561d7f75a114b45f0'],['codex/web-mobile-access-001',pins.parent]];
  return {main:git('rev-parse','refs/remotes/origin/main'),parent:git('rev-parse','refs/remotes/origin/codex/web-mobile-access-001'),mainTree:git('rev-parse',pins.main+'^{tree}'),parentTree:git('rev-parse',pins.parent+'^{tree}'),mainRoots:treeRoots(pins.main),parentRoots:treeRoots(pins.parent),mainToParent:git('diff','--name-status',pins.main,pins.parent).split('\n').filter(Boolean),changes:changes.sort(),dependencyHeads:dependencies.map(([branch])=>git('rev-parse','refs/remotes/origin/'+branch))};
 }
+// Historical evidence is evaluated only at its immutable, explicit evidence head.
+export const frozen94Head='f14bc1032efa496e4bb797b3304c1b20643a528b';
+export function observeFrozen94(){
+ const o=observe();
+ return {...o,changes:git('diff','--name-status',pins.parent,frozen94Head).split('\n').filter(Boolean).sort()};
+}
 export function compare(m,o){
  const failures=[];const check=(ok,category)=>{if(!ok)failures.push(category);};
  check(m.manifestVersion===1,'manifest-version');check(m.packetId==='WEB-ROLLBACK-EVIDENCE-001'&&m.repository==='Pay2dayco/Pay2day-SD','identity');

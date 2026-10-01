@@ -1,0 +1,18 @@
+{
+  "manifestVersion": 2,
+  "packetId": "WEB-BUSINESS-SEARCH-PRIVACY-001",
+  "repository": "Pay2dayco/Pay2day-SD",
+  "frozenEvidenceHead": "f14bc1032efa496e4bb797b3304c1b20643a528b",
+  "privacyHead": "6e55fed31f22b87f2d70d6f4c1daca4709609a78",
+  "allowedEvidenceModifications": [
+    "website-v8/docs/business-search-privacy-evidence.md",
+    "website-v8/tests/release-evidence.mjs",
+    "website-v8/tests/release-evidence.test.js"
+  ],
+  "allowedEvidenceAdditions": [
+    "website-v8/docs/release-manifest-95.json",
+    "website-v8/tests/release-successor-95.mjs",
+    "website-v8/tests/release-successor-95.test.js"
+  ],
+  "deploymentAuthorized": false
+}
