@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {readManifest,observe,compare} from './release-evidence.mjs';
-const baseline=readManifest(),observed=observe();
+import {readManifest,observeFrozen94,compare} from './release-evidence.mjs';
+const baseline=readManifest(),observed=observeFrozen94();
 test('offline manifest matches pinned source refs, tree/root/CNAME and exact evidence additions',()=>assert.deepEqual(compare(baseline,observed),[]));
 const mutations=[
  ['main SHA',m=>m.main.sha='0'.repeat(40),'sha-main'],['parent SHA',m=>m.parent.sha='1'.repeat(40),'sha-parent'],['release version',m=>m.manifestVersion=2,'manifest-version'],['CNAME',m=>m.protectedRootEntries.CNAME='synthetic-drift','root-cname'],['root file',m=>delete m.protectedRootEntries['index.html'],'root-cname'],['changed-file allowlist',m=>m.allowedPacketAdditions.push('index.html'),'packet-changes'],['main-parent expectation',m=>m.expectedMainToParentChanges=[],'main-parent-changes'],['launch authority',m=>m.deploymentAuthorized=true,'authority'],['closed security gate',m=>m.launchGates[0].status='RESOLVED','launch-gates'],['blocked branch',m=>m.excludedBlockedEvidence.runtimeRemediationAuthorized=true,'blocked-security-gate'],['staging proof',m=>m.requiredStagingEvidence=[],'staging-evidence'],['live health assumption',m=>m.rollback.knownSourceIsLiveHealthProof=true,'rollback-boundaries'],['source dependency',m=>m.sourceOnlyDependencies[0].sha='2'.repeat(40),'source-dependencies']
