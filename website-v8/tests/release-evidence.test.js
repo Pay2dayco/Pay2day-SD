@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {readManifest,observeFrozen94,compare} from './release-evidence.mjs';
+const baseline=readManifest(),observed=observeFrozen94();
+test('offline manifest matches pinned source refs, tree/root/CNAME and exact evidence additions',()=>assert.deepEqual(compare(baseline,observed),[]));
+const mutations=[
+ ['main SHA',m=>m.main.sha='0'.repeat(40),'sha-main'],['parent SHA',m=>m.parent.sha='1'.repeat(40),'sha-parent'],['release version',m=>m.manifestVersion=2,'manifest-version'],['CNAME',m=>m.protectedRootEntries.CNAME='synthetic-drift','root-cname'],['root file',m=>delete m.protectedRootEntries['index.html'],'root-cname'],['changed-file allowlist',m=>m.allowedPacketAdditions.push('index.html'),'packet-changes'],['main-parent expectation',m=>m.expectedMainToParentChanges=[],'main-parent-changes'],['launch authority',m=>m.deploymentAuthorized=true,'authority'],['closed security gate',m=>m.launchGates[0].status='RESOLVED','launch-gates'],['blocked branch',m=>m.excludedBlockedEvidence.runtimeRemediationAuthorized=true,'blocked-security-gate'],['staging proof',m=>m.requiredStagingEvidence=[],'staging-evidence'],['live health assumption',m=>m.rollback.knownSourceIsLiveHealthProof=true,'rollback-boundaries'],['source dependency',m=>m.sourceOnlyDependencies[0].sha='2'.repeat(40),'source-dependencies']
+];
+for(const [name,mutate,category]of mutations)test('synthetic manifest drift rejected: '+name,()=>{const m=structuredClone(baseline);mutate(m);assert.ok(compare(m,observed).includes(category));});
+for(const [name,mutate,category]of [
+ ['local main ref',o=>o.main='0'.repeat(40),'sha-main'],['local parent ref',o=>o.parent='1'.repeat(40),'sha-parent'],['root tree',o=>o.parentRoots.CNAME='synthetic-drift','root-cname'],['runtime modification',o=>o.changes.push('M\twebsite-v8/public/fact-find.js'),'packet-changes'],['unexpected addition',o=>o.changes.push('A\tsynthetic.invalid'),'packet-changes'],['dependency ref',o=>o.dependencyHeads[0]='2'.repeat(40),'source-dependencies'],['tree id',o=>o.parentTree='3'.repeat(40),'tree-ids']
+])test('synthetic observed drift rejected: '+name,()=>{const o=structuredClone(observed);mutate(o);assert.ok(compare(baseline,o).includes(category));});

@@ -32,9 +32,9 @@ try{
  await field('business.sector').selectOption('Other');assert.equal(await field('business.sectorOther').isVisible(),true);
  await page.locator('#ff-next').click();assert.match(await page.locator('#ff-errors').innerText(),/describe your business/);
  await field('business.sectorOther').fill('Bicycle repairs');await page.locator('#ff-next').click();await page.locator('.business-online summary').click();
- const href=await page.locator('#business-web-search').getAttribute('href');assert.ok(new URL(href).searchParams.get('q').includes('Example Trading Ltd'));
+ assert.equal(await page.locator('.business-online a, #business-web-search').count(),0);
  await field('business.website').fill('javascript:alert(1)');await page.locator('#ff-next').click();assert.match(await page.locator('#ff-errors').innerText(),/https/);
- await field('business.website').fill('https://example.invalid');await field('business.googleLink').fill('https://maps.google.com/?cid=123');
+ await field('business.website').fill('https://example.invalid');await field('business.googleLink').fill('https://listing.example.invalid/business');
  await page.screenshot({path:shotDir+'/business-links-desktop.png',fullPage:true});
  await page.locator('#ff-next').click();
  for(let i=0;i<25&&await page.locator('#step-title').innerText()!=='Check and accept';i++){await page.locator('#ff-next').click();assert.equal(await page.locator('#ff-errors').isVisible(),false);}
