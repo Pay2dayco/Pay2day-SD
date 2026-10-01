@@ -1,0 +1,28 @@
+# Public-source and preview security evidence
+
+WEB-SECURITY-EVIDENCE-001 is BLOCKED by its acceptance criterion 7. Parent: codex/web-mobile-access-001 at 9689f13999c7253f23133ae25bfbd4c6a8cc0c4d. Exact child head and executed results are recorded in the Draft PR. No runtime file is changed.
+
+## Finding requiring separate scope
+
+In public/fact-find.js, businessSearchUrl (line 98 in this parent) constructs a Google search query from entered business/trading name and registered postcode. The optional business-search anchor uses it (line 95), and the input handler updates the link (line 343). This puts customer answers into a third-party query string, contrary to this packet's explicit acceptance boundary. The new query-data-link detector fails against both public source and generated review artifacts.
+
+This is an observed source/DOM link, not evidence of automatic transmission, a deployed route or a production incident. Following it is a user action. The link was not followed and no Google/production/provider request was made. Do not treat existing public availability of business data as permission to ignore the acceptance criterion. Removing/changing the link or selecting allowed search data requires a separately authorised runtime packet; this evidence-only packet cannot repair it.
+
+## Bounded checks
+
+- boundary-scan.mjs emits only file/path and category, never matched values or fragments. Lexical patterns cover private keys, bearer/credential/provider literals, private/internal origins, obvious diagnostics, public browser persistence/query writes/data-bearing search links, analytics sinks and server-only imports. It is not a complete secret detector, dataflow analysis or security certification.
+- security-boundary.test.js scans public source and integration references and builds a temporary copy with the ordinary default command, once with empty gates and once with synthetic live-looking environment settings. Both default build variants run before the final artifact assertion; the scan correctly blocks the current source/artifact finding. Artifact inventory must match public files plus generated sitemap; private documents, maps and credential-file names are rejected. Default output has 17 noindex pages, preview notices, empty site key, disallow-all robots and no sitemap locations.
+- security-negative-control.mjs injects a clearly non-credential bearer sentinel only in memory and must exit 1 with path/category only. It does not write prohibited values to source or output artifacts. Additional synthetic detector controls include non-routable origins and invented diagnostic text; these are test detector inputs, not public response fixtures or actual credentials/customer records.
+- security-browser-check.mjs verifies six preview/memory/fragment observations and five harness probes: external request, API GET, POST, WebSocket and service-worker registration. The four network attempts must be rejected and trigger the existing harness assertion at close; worker code must never be requested/registered. Targets are synthetic .invalid or loopback and never production. Ordinary preview API, session and challenge calls send no writes. Synthetic answers stay out of local/session storage and disappear on reload.
+
+The first fragment fixture used same-document hash navigation and timed out. Corrected coverage explicitly uses fresh loads for invitation/resume/review links. It does not certify arbitrary same-document invitation navigation. Existing fragment values are read then cleared on those fresh loads; server-side references generate hashed, single-use invitation locators, but are not deployed services. Explorer-to-Fact-Find handover is in-memory; explicit comparison download is user initiated. The query-link finding above is not excused by these passing observations.
+
+## Validation and limits
+
+Run from website-v8: node --test tests/*.test.js; node build.mjs; each existing browser *-check.mjs plus review-smoke.mjs; node tests/security-browser-check.mjs. The source/build unit assertions intentionally remain failing until the runtime finding is resolved in separately approved scope. Run node tests/security-negative-control.mjs for the expected isolated exit-1 control. See the Draft PR for final exact counts and any inherited browser failures; do not interpret a blocked packet as passing.
+
+All inherited runtime, integration, root/CNAME, dependency, workflow and build files must retain parent blob/mode values. New files are four test modules plus this document. No real secret or customer value is logged. Existing synthetic fixtures/provider doubles and generic client error messages were inspected; the build publishes public assets only, not server reference modules or tests/docs. Source host strings (public canonical URLs and guarded Turnstile endpoints) are not proof of deployed controls or contacts. A lexical scan can miss obfuscation, computed keys and other sinks; manual review remains necessary.
+
+Live CSP/headers, cache/no-store, Cloudflare/Azure origin protection, real Turnstile/rate limits, cookie/session policy, retention, provider credentials, and staging/live network isolation remain separate gates. No live probe was made. Inherited 200% CSS-zoom outer overflow and unrun manual screen-reader/native-zoom/physical-device checks remain unchanged. Hosted CI absence is not a pass.
+
+Database/schema/data, production and staff-role impact: none. Windows installer and Android APK/AAB: no. Review route: Codex blocked Draft evidence -> independent Work review -> Pay2dayco decision on a bounded follow-up. Rollback is abandoning the unmerged child or a reviewed source-only revert; never parent/main reset, deployment or production rollback.
