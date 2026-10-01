@@ -1,0 +1,24 @@
+{
+  "manifestVersion": 3,
+  "packetId": "WEB-SECURITY-EVIDENCE-001",
+  "repository": "Pay2dayco/Pay2day-SD",
+  "evidenceOnly": true,
+  "parentHead": "0f9a238cc255b51ec8940ad2a9344bbdb73d9e2a",
+  "originalEvidenceHead": "402ec1983ae961fd1eb47d0781ec7567fa116b66",
+  "commonBase": "9689f13999c7253f23133ae25bfbd4c6a8cc0c4d",
+  "allowedEvidenceModifications": [
+    "website-v8/tests/release-successor-95.mjs",
+    "website-v8/tests/release-successor-95.test.js"
+  ],
+  "allowedEvidenceAdditions": [
+    "website-v8/docs/security-boundary-evidence.md",
+    "website-v8/tests/boundary-scan.mjs",
+    "website-v8/tests/security-boundary.test.js",
+    "website-v8/tests/security-browser-check.mjs",
+    "website-v8/tests/security-negative-control.mjs",
+    "website-v8/docs/release-manifest-93.json",
+    "website-v8/tests/release-successor-93.mjs",
+    "website-v8/tests/release-successor-93.test.js"
+  ],
+  "deploymentAuthorized": false
+}
