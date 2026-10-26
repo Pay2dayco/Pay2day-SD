@@ -29,6 +29,17 @@ export function validate(m,o){
  for(const p of evidenceAdds)if(!o.current[p]||o.current[p].mode!=='100644')fail.push('missing-or-mode:'+p);
  return fail;
 }
+
+export const previousSubmit='88d85c628550c55b319f260f5b80d2e15b49aa21';
+export const revisionRepair='0e41116f8106636e4ad4c8cd2fbad8010968377b';
+const revisionMods=['website-v8/public/fact-find.js','website-v8/tests/submission-ack-check.mjs','website-v8/docs/web-submit-contract-001.md'];
+const revisionEvidence=['website-v8/docs/release-manifest-submit-001.json','website-v8/tests/release-successor-submit-001.mjs','website-v8/tests/release-successor-submit-001.test.js'];
+export const revisionExpected={version:5,packet:'WEB-SUBMIT-CONTRACT-001',previousSubmit,revisionRepair,revisionMods,revisionEvidence,deploymentAuthorized:false,positiveLiveAcknowledgementApproved:false};
+export function readFrozenSubmit(){return JSON.parse(git('show',previousSubmit+':website-v8/docs/release-manifest-submit-001.json'));}
+export function observeFrozenSubmit(){return {...observe(),current:tree(previousSubmit)};}
+export function observeRevision(){return {current:observe93().current,repaired:tree(revisionRepair),repairParent:git('rev-parse',revisionRepair+'^'),containsRepair:git('merge-base',revisionRepair,'HEAD')===revisionRepair,parentRef:git('rev-parse','refs/remotes/origin/codex/web-security-evidence-001'),changes:git('diff','--name-status',previousSubmit,revisionRepair).split('\n').sort(),frozenFailures:validate(readFrozenSubmit(),observeFrozenSubmit()),originalFailures:validate(readFrozenSubmit(),observe())};}
+export function validateRevision(m,o){const f=[];if(JSON.stringify(m)!==JSON.stringify(revisionExpected))f.push('revision-manifest');if(o.repairParent!==previousSubmit||!o.containsRepair||o.parentRef!==parent)f.push('revision-ancestry');if(JSON.stringify(o.changes)!==JSON.stringify(revisionMods.map(p=>'M\t'+p).sort()))f.push('revision-scope');if(o.frozenFailures.length)f.push('frozen-submit');if(!o.originalFailures.includes('drift:website-v8/public/fact-find.js'))f.push('original-submit-guard-weakened');for(const [p,e]of Object.entries(o.repaired)){const a=o.current[p];if(!a||a.mode!==e.mode||(!revisionEvidence.includes(p)&&a.blob!==e.blob))f.push('revision-drift:'+p);}for(const p of Object.keys(o.current))if(!(p in o.repaired))f.push('revision-addition:'+p);return f;}
+
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
- try{const m=readManifest(),o=observe();if(process.argv.includes('--negative-control'))o.current.CNAME={mode:'100644',blob:'synthetic'};const failures=validate(m,o);console.log(JSON.stringify({status:failures.length?'FAIL':'PASS',failures,network:'none',deploymentAuthorized:false}));process.exitCode=failures.length?1:0;}catch{console.error('FAIL: exact successor evidence missing');process.exitCode=1;}
+ try{const m=readManifest(),o=observeRevision();if(process.argv.includes('--negative-control'))o.current.CNAME={mode:'100644',blob:'synthetic'};const failures=validateRevision(m,o);console.log(JSON.stringify({status:failures.length?'FAIL':'PASS',failures,network:'none',deploymentAuthorized:false}));process.exitCode=failures.length?1:0;}catch{console.error('FAIL: exact successor evidence missing');process.exitCode=1;}
 }
