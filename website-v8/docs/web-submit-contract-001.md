@@ -88,3 +88,27 @@ Back/Continue performs ordinary saves and therefore also makes an old final
 attempt stale. Verification and declarations are not cleared by uncertain final
 responses. No automatic retry is performed. Previous evidence is frozen at its
 reviewed commit and the revision successor pins this new repair separately.
+
+## Claude targeted P2: unknown save without an acknowledged intervening save
+
+At reviewed head a9cbe30d880ef99d05113b63b5d2c7c19aefd842, the independent
+`node tests/submission-ack-check.mjs --unknown-save-baseline` reproduction sent
+a second final request after an aborted Save & Continue Later, on both final
+paths. No acknowledged save intervened. The unchanged full baseline passed
+200/200 units. The earlier unknown-save check followed an acknowledged revision
+advance and therefore did not isolate the missing saveSequence increment.
+
+The minimal runtime correction increments saveSequence at the start of each
+non-preview saveLive call, before any asynchronous boundary. A cached final
+attempt can no longer survive an unknown save just because revision did not
+advance. Acknowledged revisions remain untouched. Preview saves return before
+the increment. Existing exact body/key checks, customer state preservation,
+neutral final messages and absence of automatic retry remain unchanged.
+
+The new isolated regression runs before the acknowledged-save case for each
+final path. It asserts unchanged revision and applicant state after the aborted
+save, then refuses a second final network request. Historical evidence and its
+validators remain frozen at their reviewed commits; a separate exact successor
+pins this repair. The Draft PR records final-head commands, counts, negative
+controls and limitations. This is synthetic evidence, not live acceptance or
+production authorization.

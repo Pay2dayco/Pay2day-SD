@@ -224,6 +224,7 @@ $('ff-errors').addEventListener('click',e=>{const a=e.target.closest('[data-erro
 function showError(message){$('ff-errors').textContent=message;$('ff-errors').hidden=false;$('ff-errors').focus();}
 async function saveLive(){
  if(preview)return;
+  saveSequence++;
  if(!applicationId){const token=await challenge('#ff-challenge','enquiry');const r=await request('/enquiries',{kind:'fact_find',contact:{name:state['applicant.fullName'],business:state['business.name'],email:state['applicant.email'],phone:state['applicant.phone']},funding:{amount:state['funding.amount']},proposedAgentCode:state['journey.agentCode']||'',invitationRef:invitationRef(),contactWordingVersion:'2026-09-24-enquiry-1',termsVersion:'2026-09-24-website-1',assisted:state['journey.mode']!=='self',turnstileToken:token},submitKey);if(typeof r.applicationId!=='string'||!Number.isInteger(r.revision))throw new Error('Your enquiry could not be confirmed. Please contact Pay2Day.');applicationId=r.applicationId;revision=r.revision;}
  const r=await request('/draft/save',{applicationId,revision,fields:cleanFields(),section:steps[step][0],block:blocks(step)[substep]?.title,counts:{owners:ownerCount,loans:loanCount,banks:bankCount,previousAddresses:previousCounts}});if(!Number.isInteger(r.revision)||r.revision<revision)throw new Error('Your changes could not be confirmed. Please try again.');revision=r.revision;
 }

@@ -5,6 +5,7 @@ const message="We couldn't confirm that your fact-find was received. Your answer
 const {browser}=await startReview(3022);
 const baseline=process.argv.includes('--baseline');
 const p2baseline=process.argv.includes('--p2-baseline');
+const unknownBaseline=process.argv.includes('--unknown-save-baseline');
 try{
  for(const assisted of [false,true]){
   if(p2baseline&&assisted)continue;
@@ -33,7 +34,7 @@ try{
   if(assisted){await page.locator('.conversation-tools summary').click();await page.locator('[name="journey.mode"]').selectOption('phone');}
   for(let i=0;await page.locator('#step-title').innerText()!=='Check and accept';i++){assert.ok(i<35);await page.locator('#ff-next').click();await page.waitForFunction(()=>!document.getElementById('ff-next').disabled);assert.ok(await page.locator('#ff-errors').isHidden());}
   if(!assisted){for(const name of ['businessUse','noPropertyPurchase','acceptance'])await page.locator('[name="application.'+name+'"]').check();await page.locator('#ff-next').click();await page.locator('#verification-code').fill('123456');await page.locator('#verify-email').click();await page.waitForFunction(()=>document.getElementById('verification-status').textContent.includes('confirmed'));}
-  for(const failure of baseline||p2baseline?['empty']:['empty','null','list','scalar','unrelated','plausible','reference','malformed','503','network','timeout']){
+  for(const failure of baseline||p2baseline||unknownBaseline?['empty']:['empty','null','list','scalar','unrelated','plausible','reference','malformed','503','network','timeout']){
    mode=failure;const before=await page.evaluate(()=>window.syntheticSnapshot());const count=calls.length;
    if(failure==='reference')await page.locator('#ff-next').press('Enter');else await page.locator('#ff-next').click();
    if(failure==='timeout'){await page.waitForFunction(()=>document.getElementById('ff-next').disabled);const started=calls.length;await page.locator('#fact-form').evaluate(f=>{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));});await page.waitForTimeout(100);assert.equal(calls.length,started,'busy duplicate submits suppressed');}
@@ -48,6 +49,16 @@ try{
   }
   if(!baseline){
    mode='empty';const finalPath=assisted?'/client-review/request':'/submission';const first=calls.filter(c=>c.path===finalPath).at(-1);const beforeSave=await page.evaluate(()=>window.syntheticSnapshot());
+   // Independent unknown-save case: no acknowledged save has intervened since final attempt.
+   if(!p2baseline){
+    const countBeforeUnknown=calls.filter(c=>c.path===finalPath).length,saveCount=calls.filter(c=>c.path==='/draft/save').length;uncertainSave=true;
+    await page.locator('#ff-save-later').click();await page.waitForFunction(()=>!document.getElementById('ff-save-later').disabled);
+    assert.equal(calls.filter(c=>c.path==='/draft/save').length,saveCount+1,'one real draft save was attempted and aborted');
+    const afterUnknown=await page.evaluate(()=>window.syntheticSnapshot());assert.deepEqual(afterUnknown,beforeSave,'unknown save preserves revision and all applicant state');
+    await page.locator('#ff-next').click();await page.waitForFunction(()=>!document.getElementById('ff-next').disabled);
+    if(unknownBaseline){assert.equal(calls.filter(c=>c.path===finalPath).length,countBeforeUnknown+1);console.log('REPRODUCED unknown-save stale retry:',finalPath);await page.close();continue;}
+    assert.equal(calls.filter(c=>c.path===finalPath).length,countBeforeUnknown,'unknown-only intervening save must refuse stale final request');assert.equal(await page.locator('#ff-errors').innerText(),message);uncertainSave=false;
+   }
    await page.locator('#ff-save-later').click();await page.waitForFunction(()=>!document.getElementById('ff-save-later').disabled);const saved=await page.evaluate(()=>window.syntheticSnapshot());assert.equal(saved.revision,beforeSave.revision+1);for(const k of ['state','emailVerified','submitKey','step','substep'])assert.deepEqual(saved[k],beforeSave[k],k+' retained across acknowledged save');
    const finalCount=calls.filter(c=>c.path===finalPath).length;await page.locator('#ff-next').click();await page.waitForFunction(()=>!document.getElementById('ff-next').disabled);
    if(p2baseline){const last=calls.filter(c=>c.path==='/submission').at(-1);assert.equal(last.key,first.key);assert.notDeepEqual(last.body,first.body);console.log('P2 REPRODUCED: same key with changed revision/body after acknowledged save');await page.close();continue;}
@@ -62,5 +73,5 @@ try{
   }
   await page.close();
  }
- console.log(baseline?'PASS: both original false successes reproduced':'PASS: both paths, 22 uncertain outcomes, accessible message and state/key preservation; no real traffic');
+ console.log(baseline?'PASS: both original false successes reproduced':unknownBaseline?'PASS: unknown-save stale retry independently reproduced on both paths':p2baseline?'PASS: acknowledged-save P2 reproduced':'PASS: both paths, 22 uncertain outcomes, isolated unknown saves, accessible message and state/key preservation; no real traffic');
 }finally{await browser.close();}
