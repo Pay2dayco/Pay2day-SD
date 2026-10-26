@@ -32,6 +32,10 @@ export function validate(m,o){
  for(const p of evidenceAdds)if(!o.current[p]||o.current[p].mode!=='100644')f.push('missing-or-mode:'+p);
  return f;
 }
+export const frozenEnquiry='45196eb034726bb3e842f5585048b76e33080146';
+const enquiryMerge='99c3d304f5c99734452e21e3d5cb92f86f9fecc0';
+export function readFrozenEnquiry(){return JSON.parse(git('show',frozenEnquiry+':website-v8/docs/release-manifest-enquiry-001.json'));}
+export function observeFrozenEnquiry(){return {...observe(),parentRef:git('rev-parse',enquiryMerge+'^1'),current:tree(frozenEnquiry)};}
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  try{const m=readManifest(),o=observe();if(process.argv.includes('--negative-control'))o.current.CNAME={mode:'100644',blob:'synthetic'};const failures=validate(m,o);console.log(JSON.stringify({status:failures.length?'FAIL':'PASS',failures,network:'none',deploymentAuthorized:false}));process.exitCode=failures.length?1:0;}catch{console.error('FAIL: exact enquiry successor evidence missing');process.exitCode=1;}
 }
