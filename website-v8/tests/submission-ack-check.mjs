@@ -4,9 +4,11 @@ import {startReview} from './review-harness.mjs';
 const message="We couldn't confirm that your fact-find was received. Your answers are still here. Please contact Pay2Day before submitting again.";
 const {browser}=await startReview(3022);
 const baseline=process.argv.includes('--baseline');
+const p2baseline=process.argv.includes('--p2-baseline');
 try{
  for(const assisted of [false,true]){
-  const page=await browser.newPage();let revision=0,mode='empty';const calls=[];
+  if(p2baseline&&assisted)continue;
+  const page=await browser.newPage();let revision=0,mode='empty',uncertainSave=false;const calls=[];
   await page.route('**/runtime-config.js',r=>r.fulfill({contentType:'text/javascript',body:"export const runtime={mode:'live',apiBase:'/api/intake/v1',turnstileSiteKey:'synthetic'};"}));
   await page.route('**/fact-find.js',async r=>{const source=await readFile(new URL('../dist/fact-find.js',import.meta.url),'utf8');await r.fulfill({contentType:'text/javascript',body:source+"\nwindow.syntheticSnapshot=()=>structuredClone({state,step,substep,emailVerified,submitKey,applicationId,revision,finished});"});});
   await page.route('https://challenges.cloudflare.com/**',r=>r.fulfill({contentType:'text/javascript',body:"window.turnstile={render:(c,o)=>{queueMicrotask(()=>o.callback('synthetic'));return 1;},remove:()=>{}};"}));
@@ -14,7 +16,8 @@ try{
    const path=new URL(r.request().url()).pathname.split('/v1')[1];calls.push({path,key:r.request().headers()['idempotency-key'],body:r.request().method()==='POST'?r.request().postDataJSON():null});
    if(path==='/session')return r.fulfill({json:{contract:'pay2day-intake-v1',acceptingEnquiries:true,csrfToken:'synthetic'}});
    if(path==='/enquiries')return r.fulfill({json:{applicationId:'synthetic-application',revision:++revision}});
-   if(path==='/draft/save')return r.fulfill({json:{revision:++revision}});
+   if(path==='/draft/save'){if(uncertainSave)return r.abort('failed');return r.fulfill({json:{revision:++revision}});}
+   if(path==='/resume/request')return r.fulfill({json:{status:'accepted'}});
    if(path==='/lookups/companies')return r.fulfill({json:{items:[]}});
    if(path==='/verification/request')return r.fulfill({json:{sent:true}});
    if(path==='/verification/confirm')return r.fulfill({json:{verified:true}});
@@ -30,7 +33,7 @@ try{
   if(assisted){await page.locator('.conversation-tools summary').click();await page.locator('[name="journey.mode"]').selectOption('phone');}
   for(let i=0;await page.locator('#step-title').innerText()!=='Check and accept';i++){assert.ok(i<35);await page.locator('#ff-next').click();await page.waitForFunction(()=>!document.getElementById('ff-next').disabled);assert.ok(await page.locator('#ff-errors').isHidden());}
   if(!assisted){for(const name of ['businessUse','noPropertyPurchase','acceptance'])await page.locator('[name="application.'+name+'"]').check();await page.locator('#ff-next').click();await page.locator('#verification-code').fill('123456');await page.locator('#verify-email').click();await page.waitForFunction(()=>document.getElementById('verification-status').textContent.includes('confirmed'));}
-  for(const failure of baseline?['empty']:['empty','null','list','scalar','unrelated','plausible','reference','malformed','503','network','timeout']){
+  for(const failure of baseline||p2baseline?['empty']:['empty','null','list','scalar','unrelated','plausible','reference','malformed','503','network','timeout']){
    mode=failure;const before=await page.evaluate(()=>window.syntheticSnapshot());const count=calls.length;
    if(failure==='reference')await page.locator('#ff-next').press('Enter');else await page.locator('#ff-next').click();
    if(failure==='timeout'){await page.waitForFunction(()=>document.getElementById('ff-next').disabled);const started=calls.length;await page.locator('#fact-form').evaluate(f=>{f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));});await page.waitForTimeout(100);assert.equal(calls.length,started,'busy duplicate submits suppressed');}
@@ -44,6 +47,13 @@ try{
    const settled=calls.length;await page.waitForTimeout(100);assert.equal(calls.length,settled,'no automatic retry');assert.ok(calls.length>count);
   }
   if(!baseline){
+   mode='empty';const finalPath=assisted?'/client-review/request':'/submission';const first=calls.filter(c=>c.path===finalPath).at(-1);const beforeSave=await page.evaluate(()=>window.syntheticSnapshot());
+   await page.locator('#ff-save-later').click();await page.waitForFunction(()=>!document.getElementById('ff-save-later').disabled);const saved=await page.evaluate(()=>window.syntheticSnapshot());assert.equal(saved.revision,beforeSave.revision+1);for(const k of ['state','emailVerified','submitKey','step','substep'])assert.deepEqual(saved[k],beforeSave[k],k+' retained across acknowledged save');
+   const finalCount=calls.filter(c=>c.path===finalPath).length;await page.locator('#ff-next').click();await page.waitForFunction(()=>!document.getElementById('ff-next').disabled);
+   if(p2baseline){const last=calls.filter(c=>c.path==='/submission').at(-1);assert.equal(last.key,first.key);assert.notDeepEqual(last.body,first.body);console.log('P2 REPRODUCED: same key with changed revision/body after acknowledged save');await page.close();continue;}
+   assert.equal(calls.filter(c=>c.path===finalPath).length,finalCount,'stale attempt refuses final network request');assert.equal(await page.locator('#ff-errors').innerText(),message);
+   uncertainSave=true;await page.locator('#ff-save-later').click();await page.waitForFunction(()=>!document.getElementById('ff-save-later').disabled);assert.equal((await page.evaluate(()=>window.syntheticSnapshot())).revision,saved.revision,'uncertain save does not fabricate revision');await page.locator('#ff-next').click();await page.waitForFunction(()=>!document.getElementById('ff-next').disabled);assert.equal(calls.filter(c=>c.path===finalPath).length,finalCount);uncertainSave=false;
+   await page.locator('#ff-back').click();await page.locator('#ff-next').click();await page.waitForFunction(()=>!document.getElementById('ff-next').disabled);assert.equal(await page.locator('#step-title').innerText(),'Check and accept');await page.locator('#ff-next').click();await page.waitForFunction(()=>!document.getElementById('ff-next').disabled);assert.equal(calls.filter(c=>c.path===finalPath).length,finalCount,'back/continue cannot reuse stale attempt');
    const retained=await page.evaluate(()=>window.syntheticSnapshot());
    await page.evaluate(()=>{window.fetch=()=>Promise.reject({privateDiagnostic:'synthetic unknown'});});
    await page.locator('#ff-next').click();await page.waitForFunction(()=>!document.getElementById('ff-next').disabled);assert.equal(await page.locator('#ff-errors').innerText(),message);const unknown=await page.evaluate(()=>window.syntheticSnapshot());assert.deepEqual(unknown,retained,'unknown errors preserve entire final state');
