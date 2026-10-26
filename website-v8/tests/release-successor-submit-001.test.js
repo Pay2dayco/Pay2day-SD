@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readManifest,observe,validate,readFrozenSubmit,observeFrozenSubmit,observeRevision,validateRevision} from './release-successor-submit-001.mjs';
+import {readManifest,observe,validate,readFrozenSubmit,observeFrozenSubmit,observeRevision,validateRevision,readFrozenRevision,observeFrozenRevision,observeUnknownSave,validateUnknownSave} from './release-successor-submit-001.mjs';
 const m=readFrozenSubmit(),o=observeFrozenSubmit();
 test('exact submit successor and frozen historical guards pass',()=>assert.deepEqual(validate(m,o),[]));
 for(const p of ['website-v8/public/fact-find.js','website-v8/public/application-terms.js','website-v8/public/runtime-config.js','website-v8/public/intake-client.js','website-v8/public/lead-capture.js','website-v8/public/logic.js','website-v8/build.mjs','website-v8/package.json','website-v8/tests/submission-ack-check.mjs','website-v8/docs/release-manifest-93.json','CNAME','index.html']){
@@ -26,8 +26,14 @@ for(const [name,change]of [
  ['mutable parent',x=>x.parent='codex/web-security-evidence-001']
 ])test('rejects manifest '+name,()=>{const x=structuredClone(m);change(x);assert.ok(validate(x,o).includes('manifest'));});
 
-const revisionManifest=readManifest(),revisionObserved=observeRevision();
+const revisionManifest=readFrozenRevision(),revisionObserved=observeFrozenRevision();
 test('P2 exact successor validates current tree and frozen original submit',()=>assert.deepEqual(validateRevision(revisionManifest,revisionObserved),[]));
 for(const p of ['CNAME','website-v8/public/fact-find.js','website-v8/public/application-terms.js','website-v8/public/intake-client.js','website-v8/tests/submission-ack-check.mjs'])test('P2 rejects drift '+p,()=>{const x=structuredClone(revisionObserved);x.current[p].blob='synthetic';assert.ok(validateRevision(revisionManifest,x).length);});
 for(const [name,mutate]of [['missing source',x=>delete x.current['website-v8/public/fact-find.js']],['new file',x=>x.current['website-v8/public/extra.js']={mode:'100644',blob:'synthetic'}],['wrong mode',x=>x.current.CNAME.mode='120000'],['moved parent',x=>x.parentRef='0'.repeat(40)],['repair ancestry',x=>x.repairParent='0'.repeat(40)],['repair missing',x=>x.containsRepair=false],['repair scope',x=>x.changes.push('M\tCNAME')],['historical failure',x=>x.frozenFailures=['synthetic']],['old guard weakened',x=>x.originalFailures=[]]])test('P2 rejects '+name,()=>{const x=structuredClone(revisionObserved);mutate(x);assert.ok(validateRevision(revisionManifest,x).length);});
 for(const [name,mutate]of [['authority',x=>x.deploymentAuthorized=true],['acceptance',x=>x.positiveLiveAcknowledgementApproved=true],['wildcard',x=>x.revisionEvidence.push('website-v8/**')]])test('P2 rejects manifest '+name,()=>{const x=structuredClone(revisionManifest);mutate(x);assert.ok(validateRevision(x,revisionObserved).length);});
+
+const unknownManifest=readManifest(),unknownObserved=observeUnknownSave();
+test('unknown-save exact successor and frozen previous revision pass',()=>assert.deepEqual(validateUnknownSave(unknownManifest,unknownObserved),[]));
+for(const p of ['CNAME','website-v8/public/fact-find.js','website-v8/public/application-terms.js','website-v8/public/intake-client.js','website-v8/tests/submission-ack-check.mjs'])test('unknown-save rejects drift '+p,()=>{const x=structuredClone(unknownObserved);x.current[p].blob='synthetic';assert.ok(validateUnknownSave(unknownManifest,x).length);});
+for(const [name,mutate]of [['missing source',x=>delete x.current['website-v8/public/fact-find.js']],['new file',x=>x.current['website-v8/public/extra.js']={mode:'100644',blob:'synthetic'}],['wrong mode',x=>x.current.CNAME.mode='120000'],['moved parent',x=>x.parentRef='0'.repeat(40)],['repair ancestry',x=>x.repairParent='0'.repeat(40)],['repair missing',x=>x.containsRepair=false],['repair scope',x=>x.changes.push('M\tCNAME')],['historical failure',x=>x.frozenFailures=['synthetic']],['old guard weakened',x=>x.originalFailures=[]]])test('unknown-save rejects '+name,()=>{const x=structuredClone(unknownObserved);mutate(x);assert.ok(validateUnknownSave(unknownManifest,x).length);});
+for(const [name,mutate]of [['authority',x=>x.deploymentAuthorized=true],['acceptance',x=>x.positiveLiveAcknowledgementApproved=true],['wildcard',x=>x.evidenceMods.push('website-v8/**')]])test('unknown-save rejects manifest '+name,()=>{const x=structuredClone(unknownManifest);mutate(x);assert.ok(validateUnknownSave(x,unknownObserved).length);});
