@@ -27,6 +27,10 @@
     {
       "blob": "f6b0cce5df11b119c441398b470739c057147623",
       "path": "core/Controller.php"
+    },
+    {
+      "path": "core/ErrorContext.php",
+      "blob": "e117b203d29909f325c9034e026a26a2e75cc787"
     }
   ],
   "limits": {
@@ -48,5 +52,82 @@
     },
     "humanToken": "synthetic-human-check",
     "opaqueCharacter": "A"
-  }
+  },
+  "errorContextSource": "<?php\ndeclare(strict_types=1);\n\nnamespace core;\n\n/**\n * Error reference and server log (error contract, phase 1).\n * Every response carries a request id (also the X-Request-Id header). Every error response is\n * normalised by normalize() and writes one P2D-ERR line to the server log. Nothing here returns\n * credentials, SQL text or provider bodies to clients; callers pass messages, this class masks them.\n */\nfinal class ErrorContext\n{\n    private const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';\n    public const EXCEPTION_KEY = '_exception';\n    /** Marker set by a site whose error body must not get a default error_code (pinned flag-off refusals). */\n    public const NO_DEFAULT_CODE_KEY = '_no_default_code';\n    public const UNEXPECTED_MESSAGE = 'Something went wrong on the server. Please try again; if it keeps happening, send the reference to IT.';\n\n    /** Test seam only: when set, log lines go here instead of error_log(). */\n    public static ?\\Closure $sink = null;\n\n    private static ?string $requestId = null;\n    private static string $method = '-';\n    private static string $route = '-';\n    private static ?int $userId = null;\n    private static string $role = '-';\n\n    /** One reference per request, generated on first use: R- and 10 upper-case letters or digits. */\n    public static function requestId(): string\n    {\n        if (self::$requestId === null) {\n            $id = '';\n            for ($i = 0; $i < 10; $i++) {\n                $id .= self::ALPHABET[random_int(0, strlen(self::ALPHABET) - 1)];\n            }\n            self::$requestId = 'R-' . $id;\n        }\n        return self::$requestId;\n    }\n\n    /** Called once by public/index.php with the request method and URI (the query string is dropped). */\n    public static function begin(string $method, string $uri): void\n    {\n        self::$method = substr(preg_replace('/[^A-Z]/', '', strtoupper($method)) ?? '', 0, 10) ?: '-';\n        $path = parse_url($uri, PHP_URL_PATH);\n        self::$route = is_string($path) && $path !== '' ? self::redact($path, 200) : '-';\n    }\n\n    /** Called by requireAuth() once the session has been checked against the database. */\n    public static function setUser(?int $userId, ?string $designation): void\n    {\n        self::$userId = $userId !== null && $userId > 0 ? $userId : null;\n        self::$role = self::roleOf((string)$designation) ?: '-';\n    }\n\n    public static function role(): string\n    {\n        return self::$role;\n    }\n\n    /** Admin and Super Admin only see provider details (same rule as JourneyPolicy::admin). */\n    public static function canSeeProvider(): bool\n    {\n        return in_array(self::$role, ['admin', 'super_admin'], true);\n    }\n\n    /**\n     * Makes an error body follow the contract: error and message mirror each other, error_code defaults to\n     * HTTP-<status>, request_id is added, and a provider block is kept only for admins. Logs one line.\n     * Success bodies (status below 400) are returned unchanged.\n     *\n     * @param mixed $data\n     * @param ?\\Throwable $exception logged only, never returned\n     * @param ?array $provider provider block (name, http_status, code, message); logged always, returned for admins\n     * @return mixed\n     */\n    public static function normalize($data, int $status, ?\\Throwable $exception = null, ?array $provider = null)\n    {\n        // apiError() passes its exception under this key so it reaches here through jsonResponse(); it is never returned.\n        if (is_array($data) && array_key_exists(self::EXCEPTION_KEY, $data)) {\n            if ($data[self::EXCEPTION_KEY] instanceof \\Throwable) {\n                $exception = $data[self::EXCEPTION_KEY];\n            }\n            unset($data[self::EXCEPTION_KEY]);\n        }\n        // Flag-off refusals keep their pinned shape: the marker suppresses the default error_code and is never returned.\n        $skipDefaultCode = is_array($data) && array_key_exists(self::NO_DEFAULT_CODE_KEY, $data);\n        if (is_array($data)) {\n            unset($data[self::NO_DEFAULT_CODE_KEY]);\n        }\n        if ($status < 400) {\n            return $data;\n        }\n        $body = is_array($data) ? $data : [];\n        $hasError = isset($body['error']);\n        $hasMessage = isset($body['message']);\n        if (!$hasError && $hasMessage && is_string($body['message'])) {\n            $body['error'] = $body['message'];\n        }\n        if (!$hasMessage && $hasError && is_string($body['error'])) {\n            $body['message'] = $body['error'];\n        }\n        if (!isset($body['error']) && !isset($body['message'])) {\n            $body['error'] = 'The request could not be completed.';\n            $body['message'] = 'The request could not be completed. Please try again; if it keeps happening, send the reference to IT.';\n        }\n        // The text as the site wrote it goes to the log only. A 5xx shows the generic sentence unless the site gave a\n        // code of its own (curated), so SQL or provider text never reaches a user.\n        $original = is_string($body['message'] ?? null) ? $body['message'] : (is_string($body['error'] ?? null) ? $body['error'] : '-');\n        // A site's own code (error_code, or a scalar code such as AFTER_HOURS_*) makes its text curated.\n        $siteCode = is_string($body['code'] ?? null) || is_int($body['code'] ?? null) ? (string)$body['code'] : null;\n        $curated = isset($body['error_code']) || ($siteCode !== null && $siteCode !== '');\n        if ($status >= 500 && !$curated) {\n            $body['error'] = self::UNEXPECTED_MESSAGE;\n            $body['message'] = self::UNEXPECTED_MESSAGE;\n        }\n        if (!isset($body['error_code']) && !$skipDefaultCode) {\n            // Keep 'code' itself as the site wrote it; error_code carries the same value for clients that read it.\n            $body['error_code'] = $siteCode !== null && $siteCode !== '' ? $siteCode : 'HTTP-' . $status;\n        }\n        if (!isset($body['request_id'])) {\n            $body['request_id'] = self::requestId();\n        }\n\n        $provider = $provider ?? (isset($body['provider']) && is_array($body['provider']) ? $body['provider'] : null);\n        unset($body['provider']);\n        if ($provider !== null && self::canSeeProvider()) {\n            $body['provider'] = self::providerFields($provider, 300);\n        }\n\n        $fields = [\n            'http_status' => $status,\n            'error_code' => (string)($body['error_code'] ?? '-'),\n            'message' => self::redact($original, 500),\n        ];\n        if ($exception !== null) {\n            $fields += self::exceptionFields($exception);\n        }\n        if ($provider !== null) {\n            $fields['provider'] = self::providerFields($provider, 500);\n        }\n        self::log($fields);\n        return $body;\n    }\n\n    /**\n     * Sends a JSON body through the contract and ends the request. For code that answers before any controller\n     * (WAF, rate limit, webhooks). $body may carry EXCEPTION_KEY, which is logged and never sent.\n     */\n    public static function respond(array $body, int $status): void\n    {\n        $out = self::normalize($body, $status);\n        if (!headers_sent()) {\n            http_response_code($status);\n            header('Content-Type: application/json; charset=utf-8');\n            header('X-Request-Id: ' . self::requestId());\n        }\n        echo self::encode($out);\n        exit();\n    }\n\n    /**\n     * JSON for a response body. Invalid UTF-8 is substituted; if encoding still fails, a minimal error body is\n     * sent instead of an empty one, so the client always gets JSON with the reference.\n     */\n    public static function encode($body): string\n    {\n        $json = json_encode($body, JSON_INVALID_UTF8_SUBSTITUTE);\n        if ($json !== false) {\n            return $json;\n        }\n        return (string)json_encode([\n            'status' => 'error',\n            'error' => 'The request could not be completed.',\n            'message' => 'The request could not be completed. Please try again; if it keeps happening, send the reference to IT.',\n            'error_code' => 'SYS-UNH-01',\n            'request_id' => self::requestId(),\n        ]);\n    }\n\n    /** Body for an uncaught exception or fatal error: JSON 500 with SYS-UNH-01 and the reference. */\n    public static function unhandled(\\Throwable $e): void\n    {\n        self::fail(['http_status' => 500, 'error_code' => 'SYS-UNH-01', 'message' => 'Unhandled exception'] + self::exceptionFields($e), true);\n    }\n\n    /** Fatal errors caught at shutdown: always logged, JSON sent only if no output has started. */\n    public static function fatal(array $error): void\n    {\n        // Half-written output from the failed request must not reach the client ahead of the JSON body.\n        while (ob_get_level() > 0) {\n            ob_end_clean();\n        }\n        $message = is_string($error['message'] ?? null) ? $error['message'] : 'Fatal error';\n        self::fail([\n            'http_status' => 500,\n            'error_code' => 'SYS-UNH-01',\n            'exception' => 'FatalError',\n            'message' => 'Fatal error',\n            'exception_message' => self::redact($message, 500),\n            'file' => self::relativeFile((string)($error['file'] ?? '-')) . ':' . (int)($error['line'] ?? 0),\n        ], false);\n    }\n\n    /** Converts an exception into log fields: class, redacted exception_message, SQLSTATE and file:line. */\n    public static function exceptionFields(\\Throwable $e): array\n    {\n        // Never the message: database and provider text can name users, hosts or data. Class, SQLSTATE, errno and place only.\n        $fields = [\n            'exception' => get_class($e),\n            'file' => self::relativeFile($e->getFile()) . ':' . $e->getLine(),\n        ];\n        if ($e instanceof \\PDOException) {\n            $state = $e->errorInfo[0] ?? $e->getCode();\n            $fields['sql_state'] = is_string($state) && $state !== '' ? $state : '-';\n            $fields['errno'] = is_int($e->errorInfo[1] ?? null) ? $e->errorInfo[1] : null;\n        }\n        return $fields;\n    }\n\n    /** Provider block for a response (max $max characters) or for the log. */\n    public static function providerFields(array $provider, int $max): array\n    {\n        $code = $provider['code'] ?? null;\n        $status = $provider['http_status'] ?? null;\n        return [\n            'name' => self::redact((string)($provider['name'] ?? '-'), 60),\n            'http_status' => is_int($status) ? $status : null,\n            'code' => $code === null ? null : self::redact((string)$code, 60),\n            'message' => self::redact((string)($provider['message'] ?? ''), $max),\n        ];\n    }\n\n    /**\n     * Masks secrets and personal data for logs and short client messages: Bearer tokens, JWTs, key/password\n     * assignments, e-mail addresses (j***@domain) and digit runs of seven or more (phone, card: keep last 3).\n     * Control characters become spaces. The result is cut to $max characters.\n     */\n    public static function redact(string $text, int $max = 300): string\n    {\n        $text = preg_replace('/Bearer\\s+[A-Za-z0-9._~+\\/=-]+/i', 'Bearer [redacted]', $text) ?? '[redacted]';\n        $text = preg_replace('/\\b[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\b/', '[jwt]', $text) ?? '[redacted]';\n        $text = preg_replace(\n            '/((?:password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|access[_-]?key)[\"\\']?\\s*[:=]\\s*[\"\\']?)[^\\s\"\\',;&]+/i',\n            '$1[redacted]',\n            $text\n        ) ?? '[redacted]';\n        $text = preg_replace_callback(\n            '/([A-Za-z0-9._%+-]+)@([A-Za-z0-9.-]+\\.[A-Za-z]{2,})/',\n            static fn (array $m): string => substr($m[1], 0, 1) . '***@' . $m[2],\n            $text\n        ) ?? '[redacted]';\n        $text = preg_replace_callback(\n            '/\\+?\\d(?:[\\s().-]?\\d){6,}/',\n            static fn (array $m): string => '***' . substr((string)preg_replace('/\\D/', '', $m[0]), -3),\n            $text\n        ) ?? '[redacted]';\n        $text = preg_replace('/[\\x00-\\x1f\\x7f]/', ' ', $text) ?? '';\n        return strlen($text) > $max ? self::cutUtf8($text, $max) . '...' : $text;\n    }\n\n    /** Writes one `P2D-ERR {json}` line. Never throws: logging must not change the response. */\n    public static function log(array $fields): void\n    {\n        try {\n            $line = array_merge([\n                'request_id' => self::requestId(),\n                'at' => gmdate('Y-m-d\\TH:i:s\\Z'),\n                'method' => self::$method,\n                'route' => self::$route,\n                'user_id' => self::$userId,\n                'role' => self::$role,\n            ], $fields);\n            $json = json_encode($line, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR);\n            $text = 'P2D-ERR ' . ($json === false ? '{}' : $json);\n            if (self::$sink !== null) {\n                (self::$sink)($text);\n            } else {\n                error_log($text);\n            }\n        } catch (\\Throwable $ignored) {\n            // Logging failure is never shown to the client.\n        }\n    }\n\n    /** Test seam only: forget request state so a test can start a new request. */\n    public static function reset(): void\n    {\n        self::$requestId = null;\n        self::$method = '-';\n        self::$route = '-';\n        self::$userId = null;\n        self::$role = '-';\n    }\n\n    /**\n     * Writes the unhandled-error line and the JSON 500 body. The body is written even when headers are already\n     * out (the exception handler); a shutdown fatal writes it only when nothing has been sent yet.\n     */\n    private static function fail(array $fields, bool $always): void\n    {\n        self::log($fields);\n        if (!$always && headers_sent()) {\n            return;\n        }\n        if (!headers_sent()) {\n            http_response_code(500);\n            header('Content-Type: application/json; charset=utf-8');\n            header('X-Request-Id: ' . self::requestId());\n        }\n        echo self::encode([\n            'status' => 'error',\n            'error' => 'Unexpected server error',\n            'message' => self::UNEXPECTED_MESSAGE,\n            'error_code' => 'SYS-UNH-01',\n            'request_id' => self::requestId(),\n        ]);\n    }\n\n    /** Cuts to at most $max bytes without splitting a multibyte character (no mbstring needed). */\n    private static function cutUtf8(string $text, int $max): string\n    {\n        $cut = substr($text, 0, $max);\n        $i = strlen($cut) - 1;\n        while ($i >= 0 && (ord($cut[$i]) & 0xC0) === 0x80) {\n            $i--;\n        }\n        if ($i >= 0) {\n            $lead = ord($cut[$i]);\n            $need = $lead >= 0xF0 ? 4 : ($lead >= 0xE0 ? 3 : ($lead >= 0xC0 ? 2 : 1));\n            if (strlen($cut) - $i < $need) {\n                $cut = substr($cut, 0, $i);\n            }\n        }\n        return $cut;\n    }\n\n    private static function roleOf(string $designation): string\n    {\n        return str_replace([' ', '-'], '_', strtolower(trim($designation)));\n    }\n\n    private static function relativeFile(string $file): string\n    {\n        $file = str_replace('\\\\', '/', $file);\n        if (defined('ROOT_PATH')) {\n            $root = rtrim(str_replace('\\\\', '/', (string)ROOT_PATH), '/') . '/';\n            if (str_starts_with($file, $root)) {\n                return substr($file, strlen($root));\n            }\n        }\n        return basename($file);\n    }\n}\n",
+  "normalizedErrors": [
+    {
+      "source": "PublicIntakeController.php:57 -> Controller.php:18 -> ErrorContext.php:98-123",
+      "body": {
+        "error_code": "HTTP-404",
+        "status": "error",
+        "request_id": "R-SYNTHETIC1",
+        "message": "Route not found.",
+        "error": "Route not found."
+      },
+      "httpStatus": 404,
+      "operation": "bootstrap"
+    },
+    {
+      "source": "PublicIntakeService.php:96 -> PublicIntakeController.php:48 -> ErrorContext.php:122-123",
+      "body": {
+        "request_id": "R-SYNTHETIC2",
+        "current_revision": 2,
+        "status": "error",
+        "error": "The application changed. Reload the saved version.",
+        "message": "The application changed. Reload the saved version.",
+        "error_code": "PI-REV-01"
+      },
+      "httpStatus": 409,
+      "operation": "draft"
+    },
+    {
+      "source": "PublicIntakeController.php:92 -> Controller.php:27-37 -> ErrorContext.php:122-123",
+      "body": {
+        "error_code": "PI-UNAVAILABLE-01",
+        "status": "error",
+        "request_id": "R-SYNTHETIC3",
+        "message": "This service is not available yet.",
+        "error": "This service is not available yet."
+      },
+      "httpStatus": 503,
+      "operation": "bootstrap"
+    },
+    {
+      "source": "PublicIntakeController.php:74/78 -> Controller.php:27-37 -> ErrorContext.php:122-123",
+      "body": {
+        "error_code": "PI-SIZE-01",
+        "status": "error",
+        "request_id": "R-SYNTHETIC4",
+        "message": "Request too large.",
+        "error": "Request too large."
+      },
+      "httpStatus": 413,
+      "operation": "draft"
+    },
+    {
+      "source": "PublicIntakeService.php:430 -> PublicIntakeController.php:48 -> ErrorContext.php:122-123",
+      "body": {
+        "field": "business.name",
+        "request_id": "R-SYNTHETIC5",
+        "status": "error",
+        "error": "Field value type is not allowed.",
+        "message": "Field value type is not allowed.",
+        "error_code": "PI-FIELD-01"
+      },
+      "httpStatus": 422,
+      "operation": "draft"
+    },
+    {
+      "source": "ErrorContext.php:312-318",
+      "body": {
+        "error_code": "SYS-UNH-01",
+        "status": "error",
+        "request_id": "R-SYNTHETIC6",
+        "message": "Something went wrong on the server. Please try again; if it keeps happening, send the reference to IT.",
+        "error": "Unexpected server error"
+      },
+      "httpStatus": 500,
+      "operation": "draft"
+    }
+  ]
 }

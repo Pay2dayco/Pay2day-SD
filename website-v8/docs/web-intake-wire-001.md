@@ -11,8 +11,9 @@ implementation, acknowledgement approval, staging proof or release permission.
   45196eb034726bb3e842f5585048b76e33080146, with merge first parent
   3a7f895f4ff99e031ece570f092c1df980e2019b.
 - API PR 162: 17583e394e279999f308262d29f7e6ffa01e4dc2. Source pins in the
-  synthetic fixture cover PublicIntakeService, Policy, OpaqueId, Controller,
-  core Controller and app/Contracts/fact-find-v2.json.
+  synthetic fixture cover the six original sources (PublicIntakeService, Policy,
+  OpaqueId, Controller, core Controller and app/Contracts/fact-find-v2.json), plus
+  core/ErrorContext.php blob e117b203d29909f325c9034e026a26a2e75cc787.
 - The exact canonical JSON text is preserved in the fixture; its Git blob is
   2e0f380a0edeb67b4fbd1036cbb7a2cae6cc27ea and has 174 unique paths. API main
   and the observed PR share that schema and FactFindContract definition.
@@ -51,6 +52,13 @@ other business validation.
 Null, empty string, numeric zero, explicit fields and omitted fields are retained
 without coercion or guessed clearing. Numbers follow standard JSON serialization
 (including negative zero becoming zero); descriptors add no normalisation.
+This describes request representation, not API storage: PublicIntakeService
+fieldMap (line 437) casts validated scalar values to strings and trims them,
+storing null for null or trim-empty values. FactFindContract::value first
+validates values, so whitespace-only input can be refused before that storage
+conversion. Numeric zero becomes stored text "0", not null. An omitted field is
+not cleared by the API upsert. The reference still performs no storage,
+normalisation, deletion or unknown-outcome recovery on the caller's behalf.
 Nothing drops metadata, maps CRM columns, chunks a save, clears hidden/repeat
 fields, advances a revision or resolves a conflict. Unsupported metadata and
 oversize input are refused instead. Pure descriptions contain caller-supplied
@@ -64,6 +72,33 @@ inferred. It returns no payload, credential, applicant value, raw exception,
 success/accepted/saved/delivered flag or state transition. Malformed, unexpected,
 accessor/proxy and oversized values produce fixed categories. Even a modified
 error originating from the module cannot inject a private diagnostic message.
+
+Error profiles now describe the actual wire output: Controller::jsonResponse
+calls ErrorContext::normalize, which adds request_id and the HTTP-<status>
+default when the producer did not supply a code. Source-shaped IDs are exactly
+R- plus ten uppercase letters/digits (12 characters), required on normalized
+errors, checked without returning their values. Feature-off 404 includes both
+error/message, HTTP-404 and request_id; it is not the old producer-only body.
+Fixtures derive 404, 409 revision conflict, 503 unavailable, 413 size, 422 field
+and 500 unhandled envelopes from the pinned producers/normalizer, using synthetic
+IDs. Known PI/SYS codes must match their source HTTP status; HTTP defaults must
+equal HTTP-<actual status>. Unknown keys/codes, missing or unsafe IDs, incorrect
+status/code combinations and invalid revisions remain refused. Normalizer
+messages need not be equal in every path (the unhandled SYS error differs), and
+no raw message is copied to diagnostics. These are observations, not acceptance
+or recovery authority.
+
+## Claude P2 correction
+
+At reviewed head 254729bf365d408679f38772c8508b2d7c6fdded, independent
+pre-edit synthetic reproduction rejected all four normalized 404/409/503/413
+bodies as unknown-key because request_id was absent from the profile. HTTP-404
+was also rejected without request_id. The revised profile addresses both errors;
+artificial unnormalized positive fixtures were replaced, not used as wire truth.
+All six original source pins and the raw 174-path schema remain unchanged; the
+new ErrorContext raw source is Git-blob checked. The previous wire evidence is
+frozen at its reviewed head, with a separate exact P2 successor; historical
+validators and negative assertions remain unchanged.
 
 The module imports only the pinned JSON fixture. It has no fetch, timer, storage,
 logging, runtime service, public import, session manager, retry, consent mapper,

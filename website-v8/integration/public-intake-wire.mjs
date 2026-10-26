@@ -5,6 +5,9 @@ const schema=JSON.parse(fixture.canonicalSource);
 const paths=schema.fields.map(({path})=>new RegExp('^'+path.split('.').map(part=>part==='i'||part==='j'?'[0-9]+':part.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('\\.')+'$'));
 const opaque=value=>typeof value==='string'&&/^[A-Za-z0-9_-]{43}$/.test(value);
 const revision=value=>Number.isSafeInteger(value)&&value>=0;
+// Source-known public intake codes and their actual HTTP statuses. Generic
+// normalizer defaults must match HTTP-<status> exactly; unknown codes stay closed.
+const errorStatuses=new Map([['PI-UNAVAILABLE-01',503],['PI-ORIGIN-01',403],['PI-TYPE-01',415],['PI-SIZE-01',413],['PI-JSON-01',400],['PI-STATE-01',409],['PI-REV-01',409],['PI-FIELD-01',422],['PI-VERIFY-01',401],['PI-CONSENT-01',422],['PI-SUBMIT-01',409],['PI-AUTH-01',401],['PI-RATE-01',429],['PI-HUMAN-01',403],['SYS-UNH-01',500]]);
 class ProfileError extends TypeError{}
 const codes=new Set(['object-shape','unknown-key','missing-key','json-shape','json-depth','json-size','uninspectable','human-token-shape','credential-shape','revision-shape','field-count','field-path','field-shape','operation-shape','http-shape','bootstrap-shape','draft-shape','error-shape']);
 const fail=code=>{throw new ProfileError(code);};
@@ -71,8 +74,8 @@ export function inspectObservedResponse(operation,httpStatus,json){
    if(json.status!=='saved'||!revision(json.revision)||json.revision<1||!Number.isInteger(json.saved_fields)||json.saved_fields<1||json.saved_fields>200)fail('draft-shape');
    code='draft-envelope-observed';
   }else if(httpStatus>=400){
-   keys(json,['status','error','message','error_code','field','current_revision','consent_type'],httpStatus===404?['status','message']:['status','error','message','error_code']);
-   if(json.status!=='error'||typeof json.message!=='string'||(Object.hasOwn(json,'error')&&typeof json.error!=='string')||(Object.hasOwn(json,'error_code')&&(typeof json.error_code!=='string'||!/^PI-[A-Z0-9-]{1,64}$/.test(json.error_code)))||(Object.hasOwn(json,'current_revision')&&!revision(json.current_revision))||['field','consent_type'].some(key=>Object.hasOwn(json,key)&&typeof json[key]!=='string'))fail('error-shape');
+   keys(json,['status','error','message','error_code','request_id','field','current_revision','consent_type'],['status','error','message','error_code','request_id']);
+   if(json.status!=='error'||typeof json.message!=='string'||typeof json.error!=='string'||typeof json.error_code!=='string'||!(errorStatuses.get(json.error_code)===httpStatus||json.error_code==='HTTP-'+httpStatus)||typeof json.request_id!=='string'||json.request_id.length!==12||!/^R-[A-Z0-9]{10}$/.test(json.request_id)||(json.error_code==='PI-REV-01'&&!Object.hasOwn(json,'current_revision'))||(Object.hasOwn(json,'current_revision')&&(!revision(json.current_revision)||json.error_code!=='PI-REV-01'))||['field','consent_type'].some(key=>Object.hasOwn(json,key)&&typeof json[key]!=='string'))fail('error-shape');
    code='error-envelope-observed';
   }else fail('http-shape');
  }catch(error){code=safeCode(error);}

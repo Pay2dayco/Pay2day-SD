@@ -20,7 +20,9 @@ test('wire pins and full 174-path schema have exact source Git blob',()=>{
  assert.equal(fixture.websiteHead,'99c3d304f5c99734452e21e3d5cb92f86f9fecc0');assert.equal(fixture.apiHead,'17583e394e279999f308262d29f7e6ffa01e4dc2');
  const raw=Buffer.from(fixture.canonicalSource);assert.equal(createHash('sha1').update(Buffer.from('blob '+raw.length+'\0')).update(raw).digest('hex'),fixture.canonicalBlob);
  assert.equal(fixture.canonicalBlob,'2e0f380a0edeb67b4fbd1036cbb7a2cae6cc27ea');assert.equal(canonical.fields.length,174);assert.equal(new Set(canonical.fields.map(f=>f.path)).size,174);
- assert.equal(fixture.sources.length,6);assert.ok(fixture.sources.every(s=>/^[a-f0-9]{40}$/.test(s.blob)));
+ const originalPins=[['app/Contracts/fact-find-v2.json','2e0f380a0edeb67b4fbd1036cbb7a2cae6cc27ea'],['app/Services/PublicIntake/PublicIntakeService.php','b5f0a61858a43ce15a157d6ecb3b717dbb9eba22'],['app/Services/PublicIntake/PublicIntakePolicy.php','006539ac4daf2722b59230071b73e1d666580e55'],['app/Services/PublicIntake/OpaqueId.php','5a2d163fa1e7ffac041c32b03a591935f6e62be5'],['app/Controllers/PublicIntakeController.php','5e2b6328a06e03ff4004210c2857c52b187545f0'],['core/Controller.php','f6b0cce5df11b119c441398b470739c057147623']];
+ assert.deepEqual(fixture.sources.slice(0,6).map(s=>[s.path,s.blob]),originalPins);assert.equal(fixture.sources.length,7);
+ const errorSource=Buffer.from(fixture.errorContextSource),errorBlob=createHash('sha1').update(Buffer.from('blob '+errorSource.length+'\0')).update(errorSource).digest('hex');assert.equal(errorBlob,'e117b203d29909f325c9034e026a26a2e75cc787');assert.deepEqual([fixture.sources[6].path,fixture.sources[6].blob],['core/ErrorContext.php',errorBlob]);
  assert.deepEqual(fixture.limits,{maxBodyBytes:16384,jsonDecoderDepth:8,maxFields:200,maxHumanTokenBytes:2048,opaqueLength:43});
 });
 test('bootstrap exact descriptor, no state or input mutation',()=>{
@@ -62,24 +64,35 @@ test('accessors and exotic shapes are refused without executing getters',()=>{
 test('valid observed envelopes produce only fixed diagnostics, never business state',()=>{
  assert.equal(diagnostic('bootstrap',200,response()),'bootstrap-envelope-observed');assert.equal(diagnostic('draft',200,{status:'saved',revision:1,saved_fields:1}),'draft-envelope-observed');
  assert.deepEqual(inspectObservedResponse('bootstrap',200,response()),{profile:'API-PR162-observation-only',diagnostics:['bootstrap-envelope-observed']});
- assert.equal(diagnostic('draft',409,{status:'error',error:'synthetic private',message:'synthetic private',error_code:'PI-REV-01',current_revision:2}),'error-envelope-observed');
- assert.equal(diagnostic('bootstrap',404,{status:'error',message:'Route not found.'}),'error-envelope-observed');
+ for(const error of fixture.normalizedErrors)assert.equal(diagnostic(error.operation,error.httpStatus,error.body),'error-envelope-observed');
+});
+for(const sample of fixture.normalizedErrors)test('normalized API error '+sample.httpStatus+' '+sample.body.error_code,()=>{
+ const before=structuredClone(sample.body);assert.equal(diagnostic(sample.operation,sample.httpStatus,sample.body),'error-envelope-observed');assert.deepEqual(sample.body,before);assert.ok(sample.source.includes('ErrorContext.php'));
+ const out=JSON.stringify(inspectObservedResponse(sample.operation,sample.httpStatus,sample.body));for(const value of [sample.body.request_id,sample.body.message,sample.body.error])assert.ok(!out.includes(value));
 });
 for(const [name,op,status,value]of [
  ['null','bootstrap',200,null],['array','bootstrap',200,[]],['raw malformed','bootstrap',200,'not json'],['unrelated','bootstrap',200,{hello:'world'}],
  ['success-shaped submission','bootstrap',200,{status:'accepted',submitted:true}],['wrong operation','submission',200,response()],['wrong HTTP','bootstrap',201,response()],
  ['bad credential','bootstrap',200,{...response(),session_token:'wrong'}],['bootstrap revision','bootstrap',200,{...response(),revision:1}],['bad timestamp','bootstrap',200,{...response(),expires_at:'tomorrow'}],
  ['unknown response key','bootstrap',200,{...response(),receipt:'private'}],['draft zero revision','draft',200,{status:'saved',revision:0,saved_fields:1}],['draft too many fields','draft',200,{status:'saved',revision:1,saved_fields:201}],
- ['unsafe error revision','draft',409,{status:'error',error:'private',message:'private',error_code:'PI-REV-01',current_revision:-1}],['missing error profile','draft',503,{message:'private'}]
+ ['unsafe error revision','draft',409,{...fixture.normalizedErrors[1].body,current_revision:-1}],['missing error profile','draft',503,{message:'private'}]
 ])test('response diagnostics refuse '+name,()=>assert.ok(!diagnostic(op,status,value).endsWith('-envelope-observed')));
+for(const [name,mutate]of [
+ ['missing id',b=>delete b.request_id],['empty id',b=>b.request_id=''],['short id',b=>b.request_id='R-SHORT'],['oversized id',b=>b.request_id='R-'+ 'X'.repeat(1000)],['id newline',b=>b.request_id+='\n'],['id control',b=>b.request_id='R-SYNTHETI\r1'],['id Unicode',b=>b.request_id='R-SYNTHÉTIC1'],['id object',b=>b.request_id={}],['id number',b=>b.request_id=123],['unknown key',b=>b.unexpected='private'],['wrong status',b=>b.status='saved'],['wrong code',b=>b.error_code='PI-SIZE-01'],['unknown PI code',b=>b.error_code='PI-UNRECOGNISED-01'],['code newline',b=>b.error_code+='\n'],['message object',b=>b.message={}],['error object',b=>b.error={}],['revision unsafe',b=>b.current_revision=Number.MAX_SAFE_INTEGER+1],['missing current revision',b=>delete b.current_revision]
+])test('normalized error refuses '+name,()=>{const body=structuredClone(fixture.normalizedErrors[1].body);mutate(body);assert.ok(!diagnostic('draft',409,body).endsWith('-envelope-observed'));});
+for(const sample of fixture.normalizedErrors)test('normalized error refuses wrong HTTP for '+sample.httpStatus,()=>{const wrong=sample.httpStatus===409?503:409;assert.ok(!diagnostic(sample.operation,wrong,sample.body).endsWith('-envelope-observed'));assert.ok(!diagnostic(sample.operation,200,sample.body).endsWith('-envelope-observed'));});
+test('HTTP defaults match actual status, and pre-normalized artificial errors are refused',()=>{
+ const body=structuredClone(fixture.normalizedErrors[0].body);body.error_code='HTTP-503';assert.ok(!diagnostic('bootstrap',404,body).endsWith('-envelope-observed'));body.error_code='HTTP-404\n';assert.ok(!diagnostic('bootstrap',404,body).endsWith('-envelope-observed'));
+ assert.ok(!diagnostic('bootstrap',404,{status:'error',message:'Route not found.'}).endsWith('-envelope-observed'));
+});
 test('depth, cycles, oversized responses and getters have bounded value-free diagnostics',()=>{
  let deep={};for(let i=0;i<9;i++)deep={nested:deep};assert.equal(diagnostic('bootstrap',200,deep),'json-depth');
  const cycle={};cycle.nested=cycle;assert.equal(diagnostic('bootstrap',200,cycle),'json-shape');
  assert.equal(diagnostic('bootstrap',200,{message:'x'.repeat(17000)}),'json-size');let reads=0;const getter={get message(){reads++;throw Error('private');}};assert.equal(diagnostic('bootstrap',200,getter),'object-shape');assert.equal(reads,0);
 });
 test('credentials and applicant diagnostics are never reflected, including unexpected exceptions',()=>{
- const canary='SYNTHETIC_PRIVATE_VALUE_000000';const error={status:'error',error:canary,message:canary,error_code:'PI-FIELD-01',field:canary};
- const out=inspectObservedResponse('draft',422,error);assert.ok(!JSON.stringify(out).includes(canary));assert.ok(!JSON.stringify(out).includes(opaque));
+ const canary='SYNTHETIC_PRIVATE_VALUE_000000';const error={...fixture.normalizedErrors[4].body,error:canary,message:canary,field:canary,request_id:'R-PRIVATE001'};
+ const out=inspectObservedResponse('draft',422,error);assert.equal(out.diagnostics[0],'error-envelope-observed');for(const value of [canary,opaque,error.request_id])assert.ok(!JSON.stringify(out).includes(value));
  const trap=new Proxy({},{getPrototypeOf(){throw Error(canary);}});assert.deepEqual(inspectObservedResponse('bootstrap',200,trap).diagnostics,['uninspectable']);assert.throws(()=>describeBootstrap(trap),/^TypeError: uninspectable$/);
  let changed;try{describeBootstrap(null);}catch(error){changed=error;}changed.message=canary;const changedTrap=new Proxy({},{getPrototypeOf(){throw changed;}});assert.deepEqual(inspectObservedResponse('bootstrap',200,changedTrap).diagnostics,['uninspectable']);assert.throws(()=>describeBootstrap(changedTrap),/^TypeError: uninspectable$/);
  assert.throws(()=>describeDraft({...draft(),[canary]:canary}),/^TypeError: unknown-key$/);
