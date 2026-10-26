@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "packet": "WEB-INTAKE-WIRE-001",
+  "repository": "Pay2dayco/Pay2day-SD",
+  "parent": "99c3d304f5c99734452e21e3d5cb92f86f9fecc0",
+  "repair": "e873247a868bef059b83b1d2dabae03edba3baa8",
+  "frozen": "45196eb034726bb3e842f5585048b76e33080146",
+  "oldParent": "3a7f895f4ff99e031ece570f092c1df980e2019b",
+  "apiHead": "17583e394e279999f308262d29f7e6ffa01e4dc2",
+  "canonicalBlob": "2e0f380a0edeb67b4fbd1036cbb7a2cae6cc27ea",
+  "repairMods": [
+    "website-v8/tests/release-successor-enquiry-001.mjs",
+    "website-v8/tests/release-successor-enquiry-001.test.js"
+  ],
+  "repairAdds": [
+    "website-v8/integration/public-intake-wire.mjs",
+    "website-v8/tests/public-intake-wire.test.js",
+    "website-v8/tests/fixtures/public-intake-wire-001.json",
+    "website-v8/docs/web-intake-wire-001.md"
+  ],
+  "evidenceAdds": [
+    "website-v8/docs/release-manifest-wire-001.json",
+    "website-v8/tests/release-successor-wire-001.mjs",
+    "website-v8/tests/release-successor-wire-001.test.js"
+  ],
+  "deploymentAuthorized": false,
+  "positiveLiveAcknowledgementApproved": false,
+  "publicConnectionAuthorized": false
+}
