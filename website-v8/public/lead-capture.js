@@ -1,5 +1,7 @@
 import {preview,request,challenge,invitationRef} from './intake-client.js';
 let context={};let contact={};let factFindCallback=null;
+let enquiryAttempt=null,enquiryWorking=false;
+const unconfirmedEnquiry="We couldn't confirm that your enquiry was received. Your details are still here. Please contact Pay2Day before sending again.";
 export function setFactFindCallback(handler){factFindCallback=handler;}
 export function setLeadContext(next){context=next||{};}
 export function setLeadContact(next){contact={...contact,...next};}
@@ -12,7 +14,36 @@ export function openLead(intent='callback',opener=document.activeElement){
  document.body.append(dialog);const form=dialog.querySelector('form'),action=dialog.querySelector('#lead-action'),phone=dialog.querySelector('#lead-phone'),button=dialog.querySelector('#lead-submit');
  function update(){const call=!results||action.value==='callback';phone.required=call;dialog.querySelector('#lead-time-wrap').hidden=!call;dialog.querySelector('#lead-contact-notice').textContent=call?'You are asking Pay2Day to email and call you about this funding enquiry. This does not sign you up for general marketing.':'You are asking Pay2Day to email this comparison. This does not request a phone call or general marketing.';button.textContent=preview?'Preview '+(call?'callback request':'email request'):(call?'Send enquiry & request a callback':'Email my results');}
  action?.addEventListener('change',update);update();let idempotencyKey=crypto.randomUUID(),sent=false,working=false;form.addEventListener('input',()=>{idempotencyKey=crypto.randomUUID();});
- form.addEventListener('submit',async e=>{e.preventDefault();if(sent||working)return;const data=Object.fromEntries(new FormData(form));const status=dialog.querySelector('#lead-status');if(data.website)return;if(phone.required&&!/^\+?[\d\s().-]{7,25}$/.test(data.phone)){status.textContent='Please enter a valid phone number.';return;}contact={name:data.name,business:data.business,email:data.email,phone:data.phone};if(preview){status.textContent='Request preview complete. Nothing was sent. To enquire now, call 020 3397 8990 or email sales@pay2day.co.uk.';return;}working=true;button.disabled=true;try{const token=await challenge('#lead-security','enquiry');const result=factFindCallback?.active()?await factFindCallback.submit({contact,preferredTime:data.time||'',token,idempotencyKey}):await request('/enquiries',{kind:!results||data.action==='callback'?'callback':'results',contact,funding:context.funding||null,results:results?context.summary:null,preferredTime:data.time||'',invitationRef:invitationRef(),proposedAgentCode:document.getElementById('explorer-agent-code')?.value||'',contactWordingVersion:'2026-09-24-enquiry-1',termsVersion:'2026-09-24-website-1',turnstileToken:token},idempotencyKey);sent=true;status.textContent=result.confirmationStatus==='sent'?'Your request is saved and your confirmation email has been sent.':'Your request is saved. Your confirmation email is being prepared.';form.querySelectorAll('input,select,button').forEach(x=>x.disabled=true);}catch(err){status.textContent=err.message;}finally{working=false;button.disabled=sent;}});
+ form.addEventListener('submit',async e=>{
+  e.preventDefault();if(sent||working)return;
+  const data=Object.fromEntries(new FormData(form)),status=dialog.querySelector('#lead-status');
+  if(data.website)return;
+  if(phone.required&&!/^\+?[\d\s().-]{7,25}$/.test(data.phone)){status.textContent='Please enter a valid phone number.';return;}
+  const standalone=!factFindCallback?.active();if(standalone&&enquiryWorking)return;
+  contact={name:data.name,business:data.business,email:data.email,phone:data.phone};
+  if(preview){status.textContent='Request preview complete. Nothing was sent. To enquire now, call 020 3397 8990 or email sales@pay2day.co.uk.';return;}
+  working=true;button.disabled=true;if(standalone)enquiryWorking=true;
+  try{
+   if(standalone){
+    // Capture before the first await; unchanged retries retain the exact token,
+    // body and key. This does not infer a server replay or acceptance policy.
+    const body=structuredClone({kind:!results||data.action==='callback'?'callback':'results',contact,funding:context.funding||null,results:results?context.summary:null,preferredTime:data.time||'',invitationRef:invitationRef(),proposedAgentCode:document.getElementById('explorer-agent-code')?.value||'',contactWordingVersion:'2026-09-24-enquiry-1',termsVersion:'2026-09-24-website-1'});
+    const signature=JSON.stringify(body);
+    if(!enquiryAttempt||enquiryAttempt.signature!==signature)enquiryAttempt={signature,key:crypto.randomUUID(),body:null};
+    const attempt=enquiryAttempt;
+    if(!attempt.body){const token=await challenge('#lead-security','enquiry');attempt.body={...body,turnstileToken:token};}
+    await request('/enquiries',attempt.body,attempt.key);
+    // No positive live website acknowledgement contract is approved.
+    status.textContent=unconfirmedEnquiry;status.tabIndex=-1;status.focus();
+   }else{
+    const token=await challenge('#lead-security','enquiry');
+    const result=await factFindCallback.submit({contact,preferredTime:data.time||'',token,idempotencyKey});
+    sent=true;status.textContent=result.confirmationStatus==='sent'?'Your request is saved and your confirmation email has been sent.':'Your request is saved. Your confirmation email is being prepared.';
+    form.querySelectorAll('input,select,button').forEach(x=>x.disabled=true);
+   }
+  }catch(err){status.textContent=standalone?unconfirmedEnquiry:err.message;if(standalone){status.tabIndex=-1;status.focus();}}
+  finally{if(standalone)enquiryWorking=false;working=false;button.disabled=sent;}
+ });
  dialog.querySelector('.close-button').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{
   dialog.remove();const visible=el=>el?.isConnected&&!el.disabled&&!el.closest('[hidden]')&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden';
   const target=visible(opener)?opener:[document.getElementById('step-title'),document.getElementById('results-title'),...document.querySelectorAll('main h1,h1')].find(visible);
