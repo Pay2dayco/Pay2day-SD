@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "packet": "WEB-ENQUIRY-CONTRACT-001",
+  "repository": "Pay2dayco/Pay2day-SD",
+  "parent": "3a7f895f4ff99e031ece570f092c1df980e2019b",
+  "repair": "e972c120e51a5669ff0871454abc70eaad783414",
+  "frozen": "38c986e639a5250af60f841c129e68834448cb2f",
+  "oldParent": "5b85978f435d5193d5bbef104b8a5bd2620ed952",
+  "repairMods": [
+    "website-v8/public/lead-capture.js",
+    "website-v8/tests/release-successor-submit-001.mjs",
+    "website-v8/tests/release-successor-submit-001.test.js"
+  ],
+  "repairAdds": [
+    "website-v8/tests/enquiry-ack-check.mjs",
+    "website-v8/docs/web-enquiry-contract-001.md"
+  ],
+  "evidenceAdds": [
+    "website-v8/docs/release-manifest-enquiry-001.json",
+    "website-v8/tests/release-successor-enquiry-001.mjs",
+    "website-v8/tests/release-successor-enquiry-001.test.js"
+  ],
+  "deploymentAuthorized": false,
+  "positiveLiveAcknowledgementApproved": false
+}
