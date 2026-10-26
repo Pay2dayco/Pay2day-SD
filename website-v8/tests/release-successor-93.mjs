@@ -40,6 +40,8 @@ export function observe93(){
  function contains(sha){try{git('merge-base','--is-ancestor',sha,'HEAD');return true;}catch{return false;}}
  return {baseline,current,parentRef:git('rev-parse','refs/remotes/origin/codex/web-business-search-privacy-001'),parentParent:git('rev-parse',frozen95Head+'^'),commonBase:git('merge-base',original93Head,frozen95Head),originalParent:git('rev-parse',original93Head+'^'),originalChanges:git('diff','--name-status',commonBase,original93Head).split('\n').sort(),containsParent:contains(frozen95Head),containsOriginal:contains(original93Head),frozen95Failures:validateSuccessor(readSuccessor(),observeFrozen95())};
 }
+export const frozen93Head='5b85978f435d5193d5bbef104b8a5bd2620ed952';
+export function observeFrozen93(){return {...observe93(),current:tree(frozen93Head)};}
 export function validate93(m,o){
  const failures=[];
  if(JSON.stringify(m)!==JSON.stringify(expected93))failures.push('manifest-93');
