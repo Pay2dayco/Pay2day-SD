@@ -1,0 +1,26 @@
+{
+  "version": 4,
+  "packet": "WEB-SUBMIT-CONTRACT-001",
+  "repository": "Pay2dayco/Pay2day-SD",
+  "parent": "5b85978f435d5193d5bbef104b8a5bd2620ed952",
+  "repair": "f49f733eb231037d43a22a9b1dbef7bd3fc27fb9",
+  "repairMods": [
+    "website-v8/public/fact-find.js",
+    "website-v8/tests/branches-check.mjs"
+  ],
+  "repairAdds": [
+    "website-v8/tests/submission-ack-check.mjs",
+    "website-v8/docs/web-submit-contract-001.md"
+  ],
+  "evidenceMods": [
+    "website-v8/tests/release-successor-93.mjs",
+    "website-v8/tests/release-successor-93.test.js"
+  ],
+  "evidenceAdds": [
+    "website-v8/docs/release-manifest-submit-001.json",
+    "website-v8/tests/release-successor-submit-001.mjs",
+    "website-v8/tests/release-successor-submit-001.test.js"
+  ],
+  "deploymentAuthorized": false,
+  "positiveLiveAcknowledgementApproved": false
+}

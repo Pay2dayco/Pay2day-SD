@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {read93,observe93,validate93} from './release-successor-93.mjs';
+import {read93,observe93,observeFrozen93,validate93} from './release-successor-93.mjs';
 import {readSuccessor,observeSuccessor,validateSuccessor} from './release-successor-95.mjs';
-const manifest=read93(),observed=observe93();
+const manifest=read93(),observed=observeFrozen93();
 test('explicit #93 successor validates current source and frozen #95/#94 evidence',()=>assert.deepEqual(validate93(manifest,observed),[]));
 test('unchanged version-2 current-tree assertions reject #93 additions',()=>assert.ok(validateSuccessor(readSuccessor(),observeSuccessor()).includes('undeclared-addition:website-v8/tests/boundary-scan.mjs')));
 for(const path of ['website-v8/public/fact-find.js','website-v8/public/logic.js','index.html','CNAME','website-v8/build.mjs','website-v8/package.json','website-v8/integration/security.mjs','website-v8/docs/release-manifest.json','website-v8/docs/release-manifest-95.json','website-v8/docs/release-rollback-evidence.md']){
@@ -36,3 +36,5 @@ for(const [name,mutate]of [
  ['mutable pin',m=>m.parentHead='codex/web-business-search-privacy-001'],
  ['wrong original evidence',m=>m.originalEvidenceHead='0'.repeat(40)]
 ])test('v3 rejects manifest mutation: '+name,()=>{const m=structuredClone(manifest);mutate(m);assert.ok(validate93(m,observed).includes('manifest-93'));});
+
+test('original v3 current-tree guard rejects submit successor',()=>assert.ok(validate93(manifest,observe93()).includes('undeclared-drift:website-v8/public/fact-find.js')));
