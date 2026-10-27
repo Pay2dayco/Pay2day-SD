@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "packet": "WEB-INTAKE-WIRE-001",
+  "previousWire": "254729bf365d408679f38772c8508b2d7c6fdded",
+  "normalizedRepair": "7a1d33187c54c5921a633c6cca1548583042e731",
+  "normalizedMods": [
+    "website-v8/integration/public-intake-wire.mjs",
+    "website-v8/tests/public-intake-wire.test.js",
+    "website-v8/tests/fixtures/public-intake-wire-001.json",
+    "website-v8/docs/web-intake-wire-001.md"
+  ],
+  "normalizedEvidence": [
+    "website-v8/docs/release-manifest-wire-001.json",
+    "website-v8/tests/release-successor-wire-001.mjs",
+    "website-v8/tests/release-successor-wire-001.test.js"
+  ],
+  "apiHead": "17583e394e279999f308262d29f7e6ffa01e4dc2",
+  "canonicalBlob": "2e0f380a0edeb67b4fbd1036cbb7a2cae6cc27ea",
+  "errorContextBlob": "e117b203d29909f325c9034e026a26a2e75cc787",
+  "deploymentAuthorized": false,
+  "positiveLiveAcknowledgementApproved": false,
+  "publicConnectionAuthorized": false
+}

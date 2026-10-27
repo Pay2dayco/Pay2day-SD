@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readManifest,observe,validate} from './release-successor-enquiry-001.mjs';
-const m=readManifest(),o=observe();
+import {readFrozenEnquiry,observeFrozenEnquiry,validate} from './release-successor-enquiry-001.mjs';
+const m=readFrozenEnquiry(),o=observeFrozenEnquiry();
 test('enquiry exact successor and historical submit evidence pass',()=>assert.deepEqual(validate(m,o),[]));
 for(const p of ['CNAME','website-v8/public/lead-capture.js','website-v8/public/fact-find.js','website-v8/public/intake-client.js','website-v8/public/application-terms.js','website-v8/tests/enquiry-ack-check.mjs']){
  test('enquiry rejects drift '+p,()=>{const x=structuredClone(o);x.current[p].blob='synthetic';assert.ok(validate(m,x).includes('drift:'+p));});
