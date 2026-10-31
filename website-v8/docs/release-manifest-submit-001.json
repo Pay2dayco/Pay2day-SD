@@ -1,0 +1,18 @@
+{
+  "version": 6,
+  "packet": "WEB-SUBMIT-CONTRACT-001",
+  "previousRevision": "a9cbe30d880ef99d05113b63b5d2c7c19aefd842",
+  "unknownSaveRepair": "3bdb56a521c50337ec91e52e4b7a4ef46e277845",
+  "repairMods": [
+    "website-v8/public/fact-find.js",
+    "website-v8/tests/submission-ack-check.mjs",
+    "website-v8/docs/web-submit-contract-001.md"
+  ],
+  "evidenceMods": [
+    "website-v8/docs/release-manifest-submit-001.json",
+    "website-v8/tests/release-successor-submit-001.mjs",
+    "website-v8/tests/release-successor-submit-001.test.js"
+  ],
+  "deploymentAuthorized": false,
+  "positiveLiveAcknowledgementApproved": false
+}

@@ -1,5 +1,5 @@
 // Company lookups use the protected intake endpoint; provider credentials stay on the server.
-export function attachCompanyLookup(root,{preview,request,onSelect}){
+export function attachCompanyLookup(root,{preview,request,onSelect,unavailable=false}){
  let timer=null,sequence=0,activeInput=null,activeIndex=-1,items=[];
  const findInput=event=>event.target.closest('[data-company-query]');
  const parts=input=>({box:document.getElementById(input.dataset.companyResults),status:document.getElementById(input.dataset.companyStatus)});
@@ -17,6 +17,7 @@ export function attachCompanyLookup(root,{preview,request,onSelect}){
  async function search(input,query,ticket){
   const {status,box}=parts(input);if(!status||!box)return;
   if(preview){status.textContent='Automatic company lookup will be available when connected. For this review, enter the business details manually.';return;}
+  if(unavailable){status.textContent='Please enter your business details below.';return;}
   status.textContent='Searching Companies House…';input.setAttribute('aria-busy','true');
   try{
    const response=await request('/lookups/companies',{query});

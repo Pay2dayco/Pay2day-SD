@@ -29,6 +29,14 @@ export function observeSuccessor(){
  }catch{current[path]=null;}}
  return {baseline,current,privacyParent:git('rev-parse',privacyHead+'^'),parentRef:git('rev-parse','refs/remotes/origin/codex/web-rollback-evidence-001'),frozenFailures:compare(readManifest(),observeFrozen94())};
 }
+// Evaluate reviewed version 2 only at its immutable evidence head. The ordinary
+// observeSuccessor/validateSuccessor current-tree guard remains unchanged.
+export const frozen95Head='0f9a238cc255b51ec8940ad2a9344bbdb73d9e2a';
+export function observeFrozen95(){
+ const o=observeSuccessor();
+ const current=Object.fromEntries(git('ls-tree','-r',frozen95Head).split('\n').map(l=>{const [mode,type,blob,path]=l.split(/[\t ]/);return [path,{mode,blob}];}));
+ return {...o,current};
+}
 export function validateSuccessor(m,o){
  const failures=[];
  if(JSON.stringify(m)!==JSON.stringify(expected))failures.push('successor-manifest');

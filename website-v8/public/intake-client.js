@@ -1,5 +1,9 @@
 import {runtime} from './runtime-config.js';
 export const preview=runtime.mode!=='live';
+// Launch scope (owner decision, API issue 161): only the self-service Fact-Find is online. These stay off in the
+// live site and show the phone and email alternative instead of sending anything.
+export const deferred=Object.freeze({assisted:true,callbacks:true,lookups:true,invitations:true});
+export const contactHtml='Call <a href="tel:+442033978990">020 3397 8990</a> or email <a href="mailto:sales@pay2day.co.uk">sales@pay2day.co.uk</a>.';
 let session=null,ready=null,invitation=null,challengeLoader=null;
 const limit=250000;const requestKeys=new Map();
 async function decode(response){
@@ -23,6 +27,7 @@ export async function request(path,body={},key){
 export async function checkInvitation(){
  const h=new URLSearchParams(location.hash.slice(1));const token=h.get('invite');if(!token)return null;
  history.replaceState(null,'',location.pathname);
+ if(!preview&&deferred.invitations)return null;
  if(!/^[A-Za-z0-9_-]{32,256}$/.test(token)||preview)return {pending:true};
  const result=await request('/invitations/resolve',{token});
  if(typeof result.invitationRef!=='string')throw new Error('This invitation could not be verified.');
