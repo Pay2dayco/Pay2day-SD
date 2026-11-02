@@ -9,7 +9,7 @@ const limit=250000;const requestKeys=new Map();
 async function decode(response){
  const text=await response.text();if(text.length>limit)throw new Error('The service returned an unexpected response.');
  let data;try{data=JSON.parse(text);}catch{throw new Error('Online enquiries are unavailable. Please call 020 3397 8990.');}
- if(!response.ok)throw new Error(response.status===429?'Please wait before trying again.':response.status===409?'This form has changed or was already submitted. Please reload your secure link.':'We could not complete that request. Please try again or call 020 3397 8990.');
+ if(!response.ok)throw Object.assign(new Error(response.status===429?'Please wait before trying again.':response.status===409?'This form has changed or was already submitted. Please reload your secure link.':'We could not complete that request. Please try again or call 020 3397 8990.'),{status:response.status});
  return data;
 }
 export async function connect(){
