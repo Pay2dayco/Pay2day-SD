@@ -25,9 +25,10 @@ const codeHelp=()=>'We have emailed a 6-digit verification code to '+(state['app
 function resendTimer(){clearInterval(codeTimer);const tick=()=>{const left=codeSent?Math.ceil((codeSent.at+RESEND_MS-Date.now())/1000):0;if(left<=0)clearInterval(codeTimer);const b=$('resend-code');if(!b)return;b.disabled=left>0;b.textContent=left>0?'Send a new code ('+left+'s)':'Send a new code';};tick();codeTimer=setInterval(tick,1000);}
 async function sendCode(){
  // Save only when the form changed since the last code: an unchanged form keeps its revision, so the request is valid as it is.
- if(!codeCurrent())await saveLive();
+ // A save makes every earlier code unusable, so the hourly-limit message must not point back to them.
+ const saved=!codeCurrent();if(saved)await saveLive();
  try{await request('/verification/request',{applicationId,revision,termsVersion,purpose:'acceptance'});}
- catch(e){if(e.status===429)throw new Error('We have already sent several codes to this email in the last hour. Use the code in your most recent email, or wait up to an hour and press Send a new code. You can also call 020 3397 8990.');throw e;}
+ catch(e){if(e.status===429)throw new Error(saved?'We have already sent several codes to this email in the last hour, so we cannot send another yet. Please try again in up to an hour, or call 020 3397 8990.':'We have already sent several codes to this email in the last hour. Use the code in your most recent email, or wait up to an hour and press Send a new code. You can also call 020 3397 8990.');throw e;}
  codeSent={applicationId,revision,submitKey,at:Date.now()};
  // conditions() enables the box's controls; the resend wait is applied after it.
  const box=$('ff-verification');if(box)box.hidden=false;conditions();const input=$('verification-code');if(input)input.value='';codeStatus(codeHelp());resendTimer();

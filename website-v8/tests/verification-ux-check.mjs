@@ -12,7 +12,7 @@ import {startReview} from './review-harness.mjs';
 
 const baseline = process.argv.includes('--baseline');
 const source = name => baseline ? readFile(join(process.env.BASELINE_DIR, name), 'utf8') : readFile(new URL('../dist/' + name, import.meta.url), 'utf8');
-const hooks = "\nwindow.verifyHooks={age:ms=>{if(typeof codeSent!=='undefined'&&codeSent)codeSent.at-=ms;},edit:()=>{submitKey=crypto.randomUUID();},snapshot:()=>({emailVerified,revision,finished})};";
+const hooks = "\nwindow.verifyHooks={age:ms=>{if(typeof codeSent!=='undefined'&&codeSent)codeSent.at-=ms;},edit:()=>{submitKey=crypto.randomUUID();},snapshot:()=>({emailVerified,revision,finished,busy})};";
 const {browser} = await startReview(3031);
 let passed = 0;
 const check = (ok, name) => { assert.ok(ok, name); passed++; };
@@ -145,7 +145,8 @@ try {
       await t.page.evaluate(() => window.verifyHooks.age(61000));
       await t.page.waitForFunction(() => !document.getElementById('resend-code').disabled);
       await t.page.locator('#resend-code').click();
-      await t.page.waitForFunction(() => document.getElementById('resend-code').disabled);
+      // The button is disabled as soon as it is pressed; wait for the resend itself to finish.
+      await t.page.waitForFunction(() => !window.verifyHooks.snapshot().busy && /\(\d+s\)/.test(document.getElementById('resend-code').textContent));
       check(t.count('/verification/request') === 2, 'Send a new code sends exactly one new code');
       check(t.count('/draft/save') === saves, 'an unchanged form is not saved again, so the new code matches it');
       await t.page.locator('#verification-code').fill(first);
@@ -171,6 +172,18 @@ try {
       await t.page.locator('#verification-code').fill(t.latest());
       await t.submit();
       check(t.api.submitted === 1 && await t.done(), 'the last code still works after the limit is reached');
+      await t.page.close();
+    }
+
+    // 5b. The limit right after a save: earlier codes are dead, so the page must not point back to them.
+    {
+      const t = await open();
+      await t.submit();
+      t.api.sentThisHour = t.api.limit;
+      await t.page.evaluate(() => window.verifyHooks.edit());
+      await t.submit();
+      const shown = await t.page.locator('#ff-errors').innerText();
+      check(/cannot send another yet/.test(shown) && !/most recent email/.test(shown), 'the limit after a save says to wait or call, not to use an old code');
       await t.page.close();
     }
 
